@@ -1,0 +1,32 @@
+# 2021-04-21 (ver 3.1.5)
+1. class (GMDIncar) add in auto_process.py 
+2. def Incarmethod delete
+3. file name revised with generate molecule in molecule.py
+4. when repeated number is 1 and -p option in mole command multiple option is deleted
+5. Fix the bug in energy.py revised
+
+# 2021-04-22
+1. Fix the bug in moelcule.py and gmd_mole.py
+
+# 2021-04-26 (ver 3.2.6)
+1. input.gmd file is needed in mole command
+2. None mode is substituted with MPJ
+3. opening parse is revised
+4. "M" mode is added to input.gmd
+5. module naming change
+6. mole (X) -> replace(0)
+
+# 2021-04-27
+1. Fix the bug in substitute.py
+
+# 2021-05-03
+1. Fix the bug in auto_process.py for moelcule relaxation
+
+# 2021-05-05
+1. Fix the bug in substitute.py
+
+#2021-05-07
+1. Fix the bug in which calculations to be processed after R-mode calculation couldn't be performed.
+
+#2021-05-11
+1. revise the DOS of ylim range,which is default value, in graph.yaml and base.py
