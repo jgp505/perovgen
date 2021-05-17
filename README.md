@@ -6,6 +6,10 @@ many analyses, plotting and format conversions.
 This script works based on several sub-commands with their own options. 
 To see the options for the sub-commands, type “gmd  sub-command -h”. 
 
+# pdos 
+
+pdos program was provided by Prof. Lee (Kyung Hee Univ. , Korea)
+
 # How to use
 > pip install perovgen
 
