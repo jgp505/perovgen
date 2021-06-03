@@ -8,7 +8,7 @@ To see the options for the sub-commands, type “gmd  sub-command -h”.
 
 # pdos 
 
-pdos program was provided by Prof. Lee (Kyung Hee Univ. , Korea)
+pdos program was provided by Prof. Lee Sung-hoon(Kyung Hee Univ. , Korea)
 
 # How to use
 > pip install perovgen
