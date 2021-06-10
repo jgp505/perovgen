@@ -1,0 +1,7 @@
+*.x
+*.mod
+*.o
+*.pyc
+POTCAR
+emc_calc
+emc_gen

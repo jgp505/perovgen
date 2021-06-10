@@ -1,0 +1,39 @@
+BD:
+  axis_fontsize: 20
+  bs_legend: best
+  bs_projection: elements
+  cb_energy_range: 4
+  dos_legend: best
+  dos_projection: elements
+  egrid_interval: 2
+  fig_size: !!python/tuple
+  - 11
+  - 8.5
+  fixed_cb_energy: false
+  font: Arial
+  legend_fontsize: 14
+  rgb_legend: true
+  tick_fontsize: 15
+  vb_energy_range: 4
+B:
+  color: b
+  fig_size: &id001 !!python/tuple
+  - 12
+  - 8
+  fontsize: 20
+  linewidth: 1
+  vbm_cbm_marker: true
+  xlim: null
+  ylim: &id002 !!python/tuple
+  - -4
+  - 6
+  zero_to_efermi: true
+D:
+  color: r
+  fig_size: *id001
+  font_size: 30
+  stack: true
+  xlim: *id002
+  ylim: null
+  zero_to_efermi: true
+name: All
