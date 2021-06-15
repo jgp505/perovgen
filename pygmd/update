@@ -61,3 +61,6 @@
 2. Delete the class DataFrame in dataframe.py
 3. Add the module for analysis of structure.
 4. Provide the scripts in pip
+
+#2021-06-15
+1. Fix the bug in dataframe.py

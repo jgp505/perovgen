@@ -225,10 +225,10 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                         if not boolen : 
                             try :
                                 number = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
-                                int(number.split()[0])
-                                #print("Realculation")
-                                number1 = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
-                                if number1 == number : 
+                                number1 = int(number.split()[0])
+                                number2 = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
+                                number3 = int(number1.split()[0]) 
+                                if number1 == number3 : 
                                     Recalculate(float(number.split()[4]))
                                     time.sleep(180)
                                 else :
