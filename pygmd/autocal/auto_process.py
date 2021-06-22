@@ -82,7 +82,7 @@ def openingphrase(inputs,strucpath):
     print("Running Shell name : ", inputs["SHELL"][0])
     print("Running start time : ",time.strftime("%c",time.localtime(time.time())))
 
-def Recalculate(energy):
+def Recalculate():
     subprocess.call(['rm','vasprun.xml'])
     subprocess.call(['rm','OUTCAR'])
     folder_list=[folder for folder in os.listdir(".") if folder.endswith("initial")]
@@ -90,20 +90,6 @@ def Recalculate(energy):
     if not folder_list :
         subprocess.call(['cp','POSCAR','POSCAR_initial'])
     subprocess.call(['cp','CONTCAR','POSCAR'])
-    '''
-    if not filelist :
-        fi = open("energy","w")
-        fi.write("%.4f\n"%(energy))
-        fi.close()
-    else :
-        fi1 = open("energy","r").readlines()
-        fi1.append("%.4f\n"%(energy))
-        with open("energy","w") as fi :
-            for f in fi1 :
-                fi.write(f)
-            fi.write("%.4f\n"%(energy))
-            fi.close()
-    '''
     subprocess.check_call(['qsub','vasp.sh'])
 
 def Process(inputs, strucpath, ds=False, orbit=False):
@@ -214,8 +200,8 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
                     elif nsw == ionicsteps :
                         #print("Realculation")
-                        Recalculate(vrun.final_energy)
-                        time.sleep(180)
+                        Recalculate()
+                        time.sleep(10)
                     else :
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
                 except ET.ParseError:
@@ -225,17 +211,21 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                         if not boolen : 
                             try :
                                 number = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
-                                number1 = int(number.split()[0])
+                                number1 = number.split()[0]
+                                time.sleep(180)
                                 number2 = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
-                                number3 = int(number1.split()[0]) 
-                                if number1 == number3 : 
-                                    Recalculate(float(number.split()[4]))
-                                    time.sleep(180)
+                                number3 = number2.split()[0]
+                                if int(number1) == int(number3) :
+                                    print("Recalculation")
+                                    Recalculate()
+                                    time.sleep(10)
                                 else :
                                     pass
                             except ValueError :
-                                pass 
-                            except IndexError :
+                                pass
+                            except IndexError:
+                                pass
+                            except :
                                 pass
                         else :
                             path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
@@ -355,7 +345,7 @@ def AutoMolOpt(strucpath, inputs) :
                     ionicsteps = vrun.nionic_steps
                     nsw = vrun.incar['NSW']
                     if nsw == ionicsteps :
-                        Recalculate(vrun.final_energy)
+                        Recalculate()
                     else :
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
                 except ET.ParseError:

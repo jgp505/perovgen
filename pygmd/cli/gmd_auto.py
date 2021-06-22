@@ -11,7 +11,7 @@ from perovgen.pygmd.base import load_structure, GMDStructure
 from perovgen.pygmd.autocal.cdb import *
 from perovgen.pygmd.autocal.auto_process import openingphrase
 from perovgen.pygmd.analysis.electronic import BSPlotting, DOSPlotting, GMDAnalysis
-from perovgen.pygmd.analysis.energy import GMDPhase, GMDExcitonbinding
+from perovgen.pygmd.analysis.energy import GMDExcitonbinding
 
 pwd = os.getcwd()
 

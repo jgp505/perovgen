@@ -64,3 +64,6 @@
 
 #2021-06-15
 1. Fix the bug in dataframe.py
+
+#2021-06-16
+1. Fix the bug in auto_process.py

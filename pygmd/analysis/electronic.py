@@ -26,7 +26,7 @@ class DOSPlotting :
 	def __init__(self, vasprun="vasprun.xml",dos=None, zero_to_efermi=True, stack=True) :
 		self.zero_to_efermi = zero_to_efermi 
 		self.stack = stack
-		self.efermi = Vasprun(vasprun,parse_potcar_file=True).efermi
+		self.efermi = Vasprun(vasprun,parse_potcar_file=False).efermi
 		self.energies = [float(i.split()[0])-self.efermi if self.zero_to_efermi else float(i.split()[0]) for i in dos]
 		self.densities = [float(i.split()[1]) for i in dos]
 	
@@ -66,7 +66,7 @@ class DOSPlotting :
 
 class BSPlotting :
     def __init__(self, vasprun='vasprun.xml',kpoints='KPOINTS'):
-        self.bsrun = BSVasprun(vasprun, parse_potcar_file=True,parse_projected_eigen=True)
+        self.bsrun = BSVasprun(vasprun, parse_potcar_file=False,parse_projected_eigen=True)
         self.bs = self.bsrun.get_band_structure(kpoints)
         self.bsdict = self.bs.as_dict()
 

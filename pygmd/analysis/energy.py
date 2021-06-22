@@ -11,7 +11,7 @@ from pymatgen.core import Element, Composition
 from pymatgen.io.vasp.outputs import Vasprun
 from pymatgen.ext.matproj import MPRester
 from pymatgen.analysis.phase_diagram import PDPlotter, PhaseDiagram
-from pymatgen.entries.compatibility import MaterialsProjectCompatibility
+from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
 from perovgen.pygmd.analysis.electronic import BSPlotting,GMDAnalysis
 
 mpr = MPRester()
@@ -19,13 +19,13 @@ class GMDPhaseDiagram :
     def __init__ (self, vasprunpath, extractcomp=None) :
         mpr = MPRester()
         self.vasprunpath = vasprunpath
-        self.compatibility = MaterialsProjectCompatibility()
+        self.compatibility = MaterialsProject2020Compatibility(check_potcar_hash=False)
         self.exceptcomp = extractcomp
         
     def get_entries(self) :
         entries = []
         for v in self.vasprunpath : 
-            vrun = Vasprun(v,parse_potcar_file=True)
+            vrun = Vasprun(v,parse_potcar_file=False)
             entry = vrun.get_computed_entry(inc_structure=True)
             entry = self.compatibility.process_entry(entry)
             entries.append(entry)

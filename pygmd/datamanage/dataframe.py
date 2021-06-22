@@ -11,7 +11,7 @@ from pymatgen.core import Structure, Element
 from pymatgen.io.vasp.outputs import Vasprun, BSVasprun
 import xml.etree.ElementTree as ET
 
-from perovgen.pygmd.base import GMDStructure, createFolder
+from perovgen.pygmd.base import GMDStructure, createFolder, fileopen
 from perovgen.pygmd.analysis.electronic import BSPlotting
 from perovgen.pygmd.analysis.energy import GMDPhaseDiagram, GMDExcitonbinding
 
@@ -43,6 +43,13 @@ def OrganizeData(path,readonly=True):
 
     for f in os.listdir(path) :
         if "mode" in f :
+            try :
+                boolen, targetlist = fileopen("{}/R_mode/OUTCAR".format(f),"accuracy")
+                if not boolen :
+                    pass
+            except FileNotFoundError :
+                pass
+
             name, number, mode= f.split("_")[:-1]
             savefile_list = ["POSCAR","POTCAR","INCAR","KPOINTS", # input files
                     "CONTCAR","OUTCAR","OSZICAR","vasprun.xml"] # output files
