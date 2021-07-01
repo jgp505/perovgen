@@ -18,7 +18,7 @@ To see the options for the sub-commands, type “gmd  sub-command -h”.
 ## 5. Configure your VASP pseudopotentails for use with pymatgen :
 	pmg config -p <EXTRACTED_VASP_POTCAR> <MY_PSP>
 	pmg config --add PMG_VASP_PSP_DIR <MY_PSP>
-##### Here <EXTRACTED_VASP_POTCAR> is the folder where your pseudopotentials are present and <MY_PSP> is the directory where the layout of pseudopotentials is organized by pymatgen. For more information refer to pymatgen installation instructions.
+###### Here <EXTRACTED_VASP_POTCAR> is the folder where your pseudopotentials are present and <MY_PSP> is the directory where the layout of pseudopotentials is organized by pymatgen. For more information refer to pymatgen installation instructions.
 
 
 # How to use
