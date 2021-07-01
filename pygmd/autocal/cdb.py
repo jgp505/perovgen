@@ -92,7 +92,7 @@ def read_input(inputpath):
         modecheck = ["M","R","C","B","D","A","U","E", # one mode
         "RC","CB","CD","DB","BD","BE","EU","CA", # two mode
         "RCB","RCD","CBD","CDB","DBE","CBE","BEU","RCA", # THREE MODE
-        "RCBD","RCDB","CBEU","DBEU","RCBE", # four mode
+        "RCBD","RCDB","CBEU","DBEU","RCBE","CDBE", # four mode
         "RCBEU","RCDBE","CDBEU", # FIVE MODE
         "RCDBEU",# SIX MODE
         "RCADBEU"] # SEVEN MODE
@@ -100,7 +100,7 @@ def read_input(inputpath):
         for i in dic["METHOD"] :
             mn+=i
         if not mn in modecheck :
-            print("There isn't {} mode\nPlease Check your mode".format(dic["MODE"]))
+            print("There isn't {} mode\nPlease Check your mode".format(dic["METHOD"]))
             print("mode only :", modecheck)
             sys.exit(0)
         

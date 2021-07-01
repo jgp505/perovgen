@@ -103,6 +103,6 @@ def randomreplace(args) :
                     fi.write(i)
             fi.close()
         #os.system("python {}/running_calnohup.py".format(os.path.dirname(__file__)))
-        os.system("nohup python {}/running_calnohup.py &".format(os.path.dirname(__file__)))
+        os.system("nohup python {}/running_calnohup.py > output.gmd &".format(os.path.dirname(__file__)))
     else :
         print("Done")

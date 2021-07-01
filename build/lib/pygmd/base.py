@@ -100,24 +100,6 @@ def createFolder(directory):
     except OSError :
         print("Error : Creating directory. " + directory)
 
-def fileopen(data, target):
-    with open(data,'r',encoding='UTF8') as file:
-        text = file.read()
-        if target in text   :
-            flag = True
-            splitdata = text.split()
-        else :
-            flag = False
-            splitdata = None
-    return flag, splitdata
-
-def count_word(data, TargetText) :
-    count = 0
-    for i in data :
-        if TargetText in i :
-            count += 1
-    return  count
-    
 class MPJClass :
     def __init__(self):
         self.mpr=MPRester()
@@ -129,6 +111,7 @@ class MPJClass :
             name = ss.composition.get_reduced_formula_and_factor()[0]
             ss.to(filename="%s_%s.cif"%(name,mp))
         return s
+
 
 class ShellPath :
     '''
@@ -186,8 +169,22 @@ class GMDStructure :
     '''
     def __init__(self, structure):
         self.structure = structure
-        self.coords = np.dot(self.structure.frac_coords, self.structure.lattice.matrix)
-        self.species = self.structure.species
+        self.coords = np.dot(structure.frac_coords, structure.lattice.matrix)
+        self.species = structure.species
+
+    def _options(self, delete_charge=True, delete_sd=False):
+        for i in range(self.structure.num_sites):
+            if delete_charge :
+                try :
+                    self.structure.replace(i, self.structure.species[i].element)
+                except :
+                    pass
+            if delete_sd :
+                try :
+                    self.structure.replace(i,self.structure.species[i].element, properties=None)
+                except :
+                    self.structure.replace(i,self.structure.species[i],properties=None)
+        return self.structure
 
     def _split_molecule(self):
         d = self.structure.distance_matrix

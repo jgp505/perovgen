@@ -334,6 +334,7 @@ def AutoMolOpt(strucpath, inputs) :
         for runf in runfolder :
             rs = RunningShell(shell = inputs["SHELL"][0],name=os.path.split(runf)[-1], path=runf)
             rs.running_mode(soc=False, run=True)
+
         # Running Check
         while True :
             time.sleep(10)
@@ -341,14 +342,16 @@ def AutoMolOpt(strucpath, inputs) :
             for j in runfolder :
                 os.chdir(j)
                 try :
-                    vrun = Vasprun("vasprun.xml",parse_potcar_file=True)
+                    vrun = Vasprun("%s/vasprun.xml"%(os.path.join(pwd,j)),parse_potcar_file=True)
                     ionicsteps = vrun.nionic_steps
                     nsw = vrun.incar['NSW']
                     if nsw == ionicsteps :
+                        #print("Realculation")
                         Recalculate()
+                        time.sleep(10)
                     else :
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
-                except ET.ParseError:
+                except :
                     pass
             if len(runfolder) == len(path1) :
                 os.chdir(pwd)

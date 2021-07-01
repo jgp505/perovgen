@@ -1,8 +1,7 @@
-inputs={'KPOINTS': [40], 'INCAR': ['MPJ'], 'SHELL': ['vasp_36.sh'], 'METHOD': ['E', 'U']}
-path=['Cs20In20Br60_1_B_mode/CONTCAR']
-ds=False
-orbit=False
-mole=False
+strucpath=['/home/jgp505/Lead-Free/Calculation/FASnBr/FASnBr3']
+mole=True
+inputs={'KPOINTS': [40], 'INCAR': ['MPJ'], 'SHELL': ['full2.sh'], 'METHOD': ['M']}
+
 import os
 import sys
 import time
