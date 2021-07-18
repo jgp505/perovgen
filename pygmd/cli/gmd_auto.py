@@ -39,45 +39,57 @@ def analyze_calculation(args):
 
     # start calculation
     if args.directory :
+        openingphrase(inputs,strucpath)
+        # start calculation
         for mt in inputs["METHOD"] :
             os.chdir(pwd)
-            runfolder =[]
-            folder_list=[folder for folder in os.listdir(".") if "{}_mode".format(mt) in folder]
-            nf = len(folder_list)
-            if mt == "B" or mt == "D" or mt=="E" :
-                    path = [os.path.abspath(b) for b in strucpath]
-                    kpath_list = [CopyCHGCAR(i) for i in path]
-                    if mt == "E" :
-                        nelect=[];kpoints=[]
-                        for b in path :
-                            if os.path.isfile(b) :
-                                b = os.path.split(b)[0]
-                            a = subprocess.check_output(['grep','NELECT','%s/OUTCAR'%(b)])
-                            nelect.append(int(float(a.split()[2])/2))
-                            bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(b)), kpoints=os.path.abspath("{}/KPOINTS".format(b)))
-                            try : 
-                                vbm = bsp.bs.kpoints[bsp.bsdict['vbm']['kpoint_index'][0]].as_dict()['fcoords']
-                            except : 
-                                vbm = [0.000, 0.000, 0.000]
-                            try :
-                                cbm = bsp.bs.kpoints[bsp.bsdict['cbm']['kpoint_index'][0]].as_dict()['fcoords']
-                            except : 
-                                cbm = [0.000, 0.000, 0.000]
-                            nelect.append((int(float(a.split()[2])/2),int(float(a.split()[2])/2)+1))
-                            kpoints.append((vbm, cbm))
+            runfolder = []
 
             # Make Folder
-            struclist = [load_structure(strucpath)][0]
+            struclist = load_structure(strucpath)
+            filenames = load_structure(strucpath,sformat=False)
             if not struclist : 
-                print("Please Enter the strucfile")
+                print("\n[Warning] the structure file does not exist.\n")
                 sys.exit(0)
 
+            # copy where the CHGCAR is located
+            if mt == "B" or mt == "D" or mt=="E" :
+                path = [os.path.abspath(b) for b in strucpath]
+                kpath_list = [CopyCHGCAR(i) for i in path]
+
+                # Data for making INPCAR using emc-master modules
+                if mt == "E" :
+                    nelect=[];kpoints=[]
+                    for b in path :
+                        if os.path.isfile(b) :
+                            b = os.path.split(b)[0]
+                        a = subprocess.check_output(['grep','NELECT','%s/OUTCAR'%(b)])
+                        bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(b)), kpoints=os.path.abspath("{}/KPOINTS".format(b)))
+
+                        try : 
+                            vbm = bsp.bs.kpoints[bsp.bsdict['vbm']['kpoint_index'][0]].as_dict()['fcoords']
+                        except : 
+                            vbm = [0.000, 0.000, 0.000]
+                        try :
+                            cbm = bsp.bs.kpoints[bsp.bsdict['cbm']['kpoint_index'][0]].as_dict()['fcoords']
+                        except : 
+                            cbm = [0.000, 0.000, 0.000]
+
+                        if args.soc : 
+                            nelect.append((int(float(a.split()[2])),int(float(a.split()[2]))+1))
+                        else :
+                            nelect.append((int(float(a.split()[2])/2),int(float(a.split()[2])/2)+1))
+                        kpoints.append((vbm, cbm))
+                else :
+                    pass
+
             for e,s in enumerate(struclist) :
-                nf+=1
                 v = GMDStructure(s).vaspname()
-                p = PerovInputs(structure=s)
+
                 if args.deleteselect :
-                    p = p._poscar(delete_selective=True)
+                    p = PerovInputs(structure=s,is_selective=True)
+                else :
+                    p = PerovInputs(structure=s)
 
                 # Control incar 
                 incar = GMDIncar(inputs).incar
@@ -90,22 +102,42 @@ def analyze_calculation(args):
                     vi = p.inputfolder(incar=modeincar, number=inputs["KPOINTS"][0])
                 else :
                     vi = p.inputfolder(incar=modeincar, number=None)
-                folder_name ="%s_%i_%s_mode"%(v,nf,mt) 
+
+                symmetry, groupnumber = s.get_space_group_info()
+                symmetry = symmetry.split("/")[0]
+                fn = filenames[e].split("/")[-1].split(".")[0]
+
+                # Designate the folder name
+                folder_list = []
+                try : 
+                    directorypath = os.listdir("{}/{}_{}_{}".format(pwd,s.composition.reduced_formula,symmetry, groupnumber))
+                    for e1,folder in enumerate(directorypath) :
+                        if "{}_mode".format(mt) in folder :
+                            folder_list.append(e1)
+                    nf = len(folder_list)+1
+                except :
+                    nf = 1
+                # [pretty formula]_[symmetry]_[symmetry number]/[formula]_[mode]_[files]
+                folder_name = "{}_{}_{}/{}_{}_{}_mode_from_{}".format(s.composition.reduced_formula,symmetry, groupnumber,
+                                                                    v, nf, mt, fn)
                 vi.write_input(output_dir=folder_name)
                 runfolder.append(folder_name)
                 if mt == "E" :
-                    vi.write_input(output_dir="%s_%i_H_mode"%(v,nf))
-                    runfolder.append("%s_%i_H_mode"%(v,nf))
+                    folder_name_H = "{}_{}_{}/{}_{}_H_mode_from_{}".format(s.composition.reduced_formula,symmetry, groupnumber,
+                                                                    v, nf,fn)
+                    vi.write_input(output_dir=folder_name_H)
+                    runfolder.append(folder_name_H)
 
-                if mt == "D" or mt == "B" :
+                # Copy the other files to generated folder
+                if mt == "D" or mt=="B" or mt == "E" :
                     copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
                     if mt == "B" :
                         MakingKpointBand(s,"{}/{}/KPOINTS".format(pwd,folder_name))
-                elif mt == "E" :
-                    copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
-                    copyfile(kpath_list[e],"%s/%s_%i_H_mode/CHGCAR"%(pwd,v,nf))
-                    MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name),nelect[e][1],kpoints[e][1])
-                    MakingInpcar(s,"%s/%s_%i_H_mode/INPCAR"%(pwd,v,nf),nelect[e][0],kpoints[e][0])
+                    elif mt == "E" :
+                        copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
+                        MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name),nelect[e][1],kpoints[e][1])
+                        copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name_H))
+                        MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name_H),nelect[e][1],kpoints[e][1])
 
             for runf in runfolder :
                 rs = RunningShell(shell = inputs["SHELL"][0],name=runf, path=os.path.join(pwd,runf))
@@ -113,6 +145,15 @@ def analyze_calculation(args):
                     emc = GMDAnalysis()
                     emc.effectivemass(path="{}/{}".format(pwd,runf),secondstep=False)
                     os.chdir(pwd)
+
+                if args.soc :
+                    incar = open("{}/{}/INCAR".format(pwd,runf),'r').readlines()
+                    index = [e for e,inc in enumerate(incar) if "MAGMOM" in inc]
+                    del incar[index[0]]
+                    with open("{}/{}/INCAR".format(pwd,runf),'w') as fi :
+                        for f in incar :
+                            fi.write(f)
+                    fi.close()
                 rs.running_mode(soc=args.soc, run=False)
                 print("Generate folder {}/{}".format(pwd,runf))
     else :
@@ -135,4 +176,4 @@ def analyze_calculation(args):
                 fi.write(i)
         fi.close()
         #os.system("python {}/running_calnohup.py".format(os.path.dirname(__file__)))
-        os.system("nohup python {}/running_calnohup.py > output.gmd &".format(os.path.dirname(__file__)))
+        os.system("nohup python -u {}/running_calnohup.py > output.gmd &".format(os.path.dirname(__file__)))

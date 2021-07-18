@@ -94,16 +94,28 @@ def Recalculate():
 
 def Process(inputs, strucpath, ds=False, orbit=False):
     openingphrase(inputs,strucpath)
+
     # start calculation
     pwd = os.getcwd()
+
     for mt in inputs["METHOD"] :
         os.chdir(pwd)
-        runfolder =[]
-        folder_list=[folder for folder in os.listdir(".") if "{}_mode".format(mt) in folder]
-        nf = len(folder_list)
+        runfolder = []
+
+        # Make Folder
+        struclist = load_structure(strucpath)
+        filenames = load_structure(strucpath,sformat=False)
+
+        if not struclist : 
+            print("\n[Warning] the structure file does not exist.\n")
+            sys.exit(0)
+
+        # copy where the CHGCAR is located
         if mt == "B" or mt == "D" or mt=="E" :
             path = [os.path.abspath(b) for b in strucpath]
             kpath_list = [CopyCHGCAR(i) for i in path]
+
+            # Data for making INPCAR using emc-master modules
             if mt == "E" :
                 nelect=[];kpoints=[]
                 for b in path :
@@ -111,6 +123,7 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                         b = os.path.split(b)[0]
                     a = subprocess.check_output(['grep','NELECT','%s/OUTCAR'%(b)])
                     bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(b)), kpoints=os.path.abspath("{}/KPOINTS".format(b)))
+
                     try : 
                         vbm = bsp.bs.kpoints[bsp.bsdict['vbm']['kpoint_index'][0]].as_dict()['fcoords']
                     except : 
@@ -119,6 +132,7 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                         cbm = bsp.bs.kpoints[bsp.bsdict['cbm']['kpoint_index'][0]].as_dict()['fcoords']
                     except : 
                         cbm = [0.000, 0.000, 0.000]
+
                     if orbit : 
                         nelect.append((int(float(a.split()[2])),int(float(a.split()[2]))+1))
                     else :
@@ -127,15 +141,9 @@ def Process(inputs, strucpath, ds=False, orbit=False):
             else :
                 pass
 
-        # Make Folder
-        struclist = load_structure(strucpath)
-        if not struclist : 
-            print("Please Enter the strucfile")
-            sys.exit(0)
-
         for e,s in enumerate(struclist) :
-            nf+=1
             v = GMDStructure(s).vaspname()
+
             if ds :
                 p = PerovInputs(structure=s,is_selective=True)
             else :
@@ -152,22 +160,42 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                 vi = p.inputfolder(incar=modeincar, number=inputs["KPOINTS"][0])
             else :
                 vi = p.inputfolder(incar=modeincar, number=None)
-            folder_name ="%s_%i_%s_mode"%(v,nf,mt)
+
+            symmetry, groupnumber = s.get_space_group_info()
+            fn = filenames[e].split("/")[-1].split(".")[0]
+
+            # Designate the folder name
+            folder_list = []
+            try : 
+                directorypath = os.listdir("{}/{}_{}_{}".format(pwd,s.composition.reduced_formula,symmetry, groupnumber))
+                for e1,folder in enumerate(directorypath) :
+                    if "{}_mode".format(mt) in folder :
+                        folder_list.append(e1)
+                nf = len(folder_list)+1
+            except :
+                nf = 1
+
+            # [pretty formula]_[symmetry]_[symmetry number]/[formula]_[mode]_[files]
+            folder_name = "{}_{}_{}/{}_{}_{}_mode_from_{}".format(s.composition.reduced_formula,symmetry, groupnumber,
+                                                                v, nf, mt, fn)
             vi.write_input(output_dir=folder_name)
             runfolder.append(folder_name)
             if mt == "E" :
-                vi.write_input(output_dir="%s_%i_H_mode"%(v,nf))
-                runfolder.append("%s_%i_H_mode"%(v,nf))
+                folder_name_H = "{}_{}_{}/{}_{}_H_mode_from_{}".format(s.composition.reduced_formula,symmetry, groupnumber,
+                                                                v, nf,fn)
+                vi.write_input(output_dir=folder_name_H)
+                runfolder.append(folder_name_H)
 
-            if mt == "D" or mt=="B" :
+            # Copy the other files to generated folder
+            if mt == "D" or mt=="B" or mt == "E" :
                 copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
                 if mt == "B" :
                     MakingKpointBand(s,"{}/{}/KPOINTS".format(pwd,folder_name))
-            elif mt == "E" :
-                copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
-                copyfile(kpath_list[e],"%s/%s_%i_H_mode/CHGCAR"%(pwd,v,nf))
-                MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name),nelect[e][1],kpoints[e][1])
-                MakingInpcar(s,"%s/%s_%i_H_mode/INPCAR"%(pwd,v,nf),nelect[e][0],kpoints[e][0])
+                elif mt == "E" :
+                    copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name))
+                    MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name),nelect[e][1],kpoints[e][1])
+                    copyfile(kpath_list[e],"{}/{}/CHGCAR".format(pwd,folder_name_H))
+                    MakingInpcar(s,"{}/{}/INPCAR".format(pwd,folder_name_H),nelect[e][1],kpoints[e][1])
 
         for runf in runfolder :
             rs = RunningShell(shell = inputs["SHELL"][0],name=runf, path=os.path.join(pwd,runf))
@@ -199,7 +227,7 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                     if nsw == 1 :
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
                     elif nsw == ionicsteps :
-                        #print("Realculation")
+                        print("[Notice] Realculation because ionic step is same NSW value")
                         Recalculate()
                         time.sleep(10)
                     else :
@@ -216,15 +244,11 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                                 number2 = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
                                 number3 = number2.split()[0]
                                 if int(number1) == int(number3) :
-                                    print("Recalculation")
+                                    print("[Notice] Realculation because it has not yet obtained a stabilizing structure.")
                                     Recalculate()
                                     time.sleep(10)
                                 else :
                                     pass
-                            except ValueError :
-                                pass
-                            except IndexError:
-                                pass
                             except :
                                 pass
                         else :
@@ -252,9 +276,6 @@ def Process(inputs, strucpath, ds=False, orbit=False):
                     s = load_structure(".")[0]
                     path = analysis_path.partialDOS(structure=s)
                     print("\n## Partial DOS is Done ##")
-                    #dos = open("{}/dos".format(i),'r').readlines()[1:]
-                    #fig = plt.figure(figsize=(12,8))
-                    #DOSPlotting(vasprun="vasprun.xml",dos=dos).get_plot().savefig("{}.pdf".format(i.split("/")[-1]))
                 else :
                     analysis_path.effectivemass(path=i, secondstep=True)
                     em_e = open("{}/EM".format(i),'r').readlines()[-12:]
@@ -334,6 +355,7 @@ def AutoMolOpt(strucpath, inputs) :
         for runf in runfolder :
             rs = RunningShell(shell = inputs["SHELL"][0],name=os.path.split(runf)[-1], path=runf)
             rs.running_mode(soc=False, run=True)
+
         # Running Check
         while True :
             time.sleep(10)
@@ -341,14 +363,16 @@ def AutoMolOpt(strucpath, inputs) :
             for j in runfolder :
                 os.chdir(j)
                 try :
-                    vrun = Vasprun("vasprun.xml",parse_potcar_file=True)
+                    vrun = Vasprun("%s/vasprun.xml"%(os.path.join(pwd,j)),parse_potcar_file=True)
                     ionicsteps = vrun.nionic_steps
                     nsw = vrun.incar['NSW']
                     if nsw == ionicsteps :
+                        #print("Realculation")
                         Recalculate()
+                        time.sleep(10)
                     else :
                         path1.append("%s/CONTCAR"%(os.path.join(pwd,j)))
-                except ET.ParseError:
+                except :
                     pass
             if len(runfolder) == len(path1) :
                 os.chdir(pwd)

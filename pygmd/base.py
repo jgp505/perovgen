@@ -186,6 +186,7 @@ class GMDStructure :
     '''
     def __init__(self, structure):
         self.structure = structure
+        self.structure.sort()
         self.coords = np.dot(self.structure.frac_coords, self.structure.lattice.matrix)
         self.species = self.structure.species
 
