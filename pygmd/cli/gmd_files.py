@@ -96,3 +96,10 @@ def files(args):
             ss = mpr.mpr.get_structure_by_material_id(mp)
             name = ss.composition.get_reduced_formula_and_factor()[0]
             ss.to(filename="%s_%s.cif"%(name,mp))
+
+    elif args.transition :
+        files = load_structure(args.transition)
+        for e,f in enumerate(files) : 
+            
+            name = GMDStructure(f).vaspname()
+            f.to(filename="{}_GMD_{}.cif".format(name,e))

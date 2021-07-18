@@ -65,5 +65,6 @@
 #2021-06-15
 1. Fix the bug in dataframe.py
 
-#2021-06-16
-1. Fix the bug in auto_process.py
+#2021-07-18
+1. Change the algorithm of folder name in auto_process.py and gmd_auto.py
+2. Fix the bug formula name in base.py

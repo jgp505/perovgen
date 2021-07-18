@@ -1,5 +1,5 @@
-inputs={'KPOINTS': [40], 'INCAR': ['MPJ'], 'SHELL': ['vasp_36.sh'], 'METHOD': ['E', 'U']}
-path=['Cs20In20Br60_1_B_mode/CONTCAR']
+inputs={'KPOINTS': [40], 'INCAR': ['PBE'], 'SHELL': ['full2.sh'], 'METHOD': ['R', 'C', 'D', 'B', 'E']}
+path=['../EntryWithCollCode26058 (1).cif', '../EntryWithCollCode39823 (1).cif', '../EntryWithCollCode431322 (1).cif']
 ds=False
 orbit=False
 mole=False

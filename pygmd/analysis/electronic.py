@@ -122,29 +122,28 @@ class BSPlotting :
         if eg != 0 :
             cbm1 = [(self.bs.distance[index], cbm['energy']) for index in cbm_kindex]
             vbm1 = [(self.bs.distance[index], vbm['energy']) for index in vbm_kindex]
+            
             if self.bsdict['band_gap']['direct'] :
-                band_inform['E_g'] = {"Direct":eg}
-                band_inform['CBM'] = {"Direct":cbm1}
-                band_inform['VBM'] = {"Direct":vbm1}
+                direct_eg = eg
+                indirect_eg = eg
+                
+                cbm2 = cbm1 ; vbm2 = vbm1
             else :
-                cindex = cbm_bindex['1']; vindex = vbm_bindex['1']
-                dce , dve = [], []
-                dce = [self.bs.bands[Spin.up][j,i] for i,j in zip(cbm_kindex,vindex)]
-                dve = [self.bs.bands[Spin.up][j,i] for i,j in zip(vbm_kindex,cindex)]
-                cbm2 = [(self.bs.distance[i],self.bs.bands[Spin.up][j,i]) for i,j in zip(cbm_kindex, vindex)]
-                vbm2 = [(self.bs.distance[i],self.bs.bands[Spin.up][j,i]) for i,j in zip(vbm_kindex, cindex)]
-                if min(dve) < eg-min(dce) :
-                    direct = min(dve) 
-                else :
-                    direct = eg-min(dce)
-                band_inform['E_g'] = {"Indirect" : eg, "Direct" : direct}
-                band_inform['CBM'] = {"Indirect":cbm1, "Direct" : cbm2}
-                band_inform['VBM'] = {"Indirect":vbm1, "Direct" : vbm2}
-
+                direct_dict = self.bs.get_direct_band_gap_dict()[Spin.up]
+                indirect_eg = eg
+                direct_eg = direct_dict['value']
+                direct_kindex = direct_dict['kpoint_index']
+                
+                vbm2 = [(self.bs.distance[direct_kindex], self.bs.bands[Spin.up][direct_dict['band_indices'][0],direct_kindex])]
+                cbm2 = [(self.bs.distance[direct_kindex], self.bs.bands[Spin.up][direct_dict['band_indices'][1],direct_kindex])]
+                
+            band_inform['E_g'] = {"Direct":direct_eg,"Indirect":indirect_eg}
+            band_inform['CBM'] = {"Direct":cbm2, "Indirect": cbm1}
+            band_inform['VBM'] = {"Direct":vbm2, "Indirect": vbm1}
         else :
-            band_inform['CBM']=None
-            band_inform['VBM']=None
-            band_inform['E_g']={"Direct":0, "Indirect":0}
+            band_inform['E_g'] = {"Direct":0, "Indirect" : 0}
+            band_inform['CBM'] = {"Direct":None,"Indirect":None}
+            band_inform['VBM'] = {"Direct":None,"Indirect":None}
 
         # Energies and distances
         steps = [br["end_index"] + 1 for br in self.bs.branches][:-1]
