@@ -1,0 +1,10 @@
+README.md
+setup.py
+./argument/gmd3
+argument/gmd3
+perovgen.egg-info/PKG-INFO
+perovgen.egg-info/SOURCES.txt
+perovgen.egg-info/dependency_links.txt
+perovgen.egg-info/not-zip-safe
+perovgen.egg-info/requires.txt
+perovgen.egg-info/top_level.txt

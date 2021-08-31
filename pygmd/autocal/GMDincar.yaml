@@ -1,0 +1,16 @@
+ALGO: Normal
+EDIFF: 1E-6
+EDIFFG: -0.01
+ENCUT: 520
+IBRION: 2
+ISIF: 3
+ISMEAR: 0
+ISPIN: 1
+ISTART: 0
+LCHARG: false
+LREAL: A
+LWAVE: false
+NSW: 500
+PREC: Accurate
+SIGMA: 0.05
+SYSTEM: Structure Optimization

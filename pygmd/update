@@ -1,0 +1,82 @@
+# 2021-04-21 (ver 3.1.5)
+1. class (GMDIncar) add in auto_process.py 
+2. def Incarmethod delete
+3. file name revised with generate molecule in molecule.py
+4. when repeated number is 1 and -p option in mole command multiple option is deleted
+5. Fix the bug in energy.py revised
+
+# 2021-04-22
+1. Fix the bug in moelcule.py and gmd_mole.py
+
+# 2021-04-26 (ver 3.2.6)
+1. input.gmd file is needed in mole command
+2. None mode is substituted with MPJ
+3. opening parse is revised
+4. "M" mode is added to input.gmd
+5. module naming change
+6. mole (X) -> replace(0)
+
+# 2021-04-27
+1. Fix the bug in substitute.py
+
+# 2021-05-03
+1. Fix the bug in auto_process.py for moelcule relaxation
+
+# 2021-05-05
+1. Fix the bug in substitute.py
+
+#2021-05-11
+1. revise the DOS of ylim range,which is default value, in graph.yaml and base.py
+
+# 2021-05-14
+1. Provide the scripts in github 
+
+#2021-05-17
+1. Fix the bug, which is not change mode for delting the selective dynamics in auto_process.py
+
+#2021-05-21 (ver.3.3.6)
+1. Fix the algorithm for automatic calculation in auto_process.py
+
+#2021-05-25
+1. Fix the bug in which calculations to be processed after R-mode calculation couldn't be performed.
+
+#2021-05-30
+1. U_mode algorithm is fixed
+
+#2021-06-02 (ver. 3.4.2)
+1. Added a class, named SurfaceAdsorption in substitute.py, that substituted molecules instead of elements in the surface structure 
+2. Revised contents that find direct band gap and indrect band gap simultaneously in electronic.py
+
+#2021-06-03 (ver. 3.5.1)
+1. Revised auto_process
+2. add function for error check in R-mode
+3. add function in base
+4. add the parse when the file can't be found 
+
+#2021-06-09 
+1. Fix the bug in auto_process.py
+
+#2021-06-10
+1. Add a class, named OrganizeData in dataframe.py, that organize the folder, which finished calculation.
+2. Delete the class DataFrame in dataframe.py
+3. Add the module for analysis of structure.
+4. Provide the scripts in pip
+
+#2021-06-15
+1. Fix the bug in dataframe.py
+
+#2021-07-18
+1. Change the algorithm of folder name in auto_process.py and gmd_auto.py
+2. Fix the bug formula name in base.py
+
+#2021-08-24 (Ver 3.6.0)
+1. fix the script name base.py as input_structure.py
+2. fix the return value of the load_structure definition in input_structure.py
+3. fix the definition name to formula from vaspname in input_structure.py
+
+#2021-08-30 
+1. Add the mode for HSE calculation called G-mode
+
+#2021-08-31 (Ver 3.6.2)
+1. Fix the bug in replace mode for subsituted elements
+2. Change the algorithm of input.gmd 

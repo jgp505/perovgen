@@ -1,0 +1,11 @@
+Metadata-Version: 1.2
+Name: perovgen
+Version: 3.6.2
+Summary: Automated VASP Program with Pymatgen
+Home-page: UNKNOWN
+Author: Jong Goo Park
+Author-email: jgp505@gmail.com
+License: Hanbat National Univ.
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3
