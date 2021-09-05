@@ -195,9 +195,10 @@ class RandomMolecule:
             else:
                 new_ = [[self.degree[0], self.degree[1], self.degree[2]] for i in range(len(r_coord))]
         # add coordination
-        lthe=[];lph=[];lps=[]
+        lthe=[];lph=[];lps=[];original_coord=[]
         for coord, degree in zip(r_coord,new_):
             index = s_coord.index(coord)
+            original_coord.append(coord)
             del s_coord[index]
             del s_species[index]
 
@@ -210,7 +211,7 @@ class RandomMolecule:
             s_coord.extend(np.add(dot, coord).tolist())
             s_species.extend(ms_species)
         # csv 
-        df = pd.DataFrame({'index':self.coord,'Theta':lthe,'Phi':lph,'Psi':lps})
+        df = pd.DataFrame({'index':self.coord,"coords":original_coord,'Theta':lthe,'Phi':lph,'Psi':lps})
         df = df.set_index('index')
 
         # add the properties of selective_dynamics 

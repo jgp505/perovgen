@@ -46,20 +46,14 @@ def analysis(args) :
             number = int(input("Please enter the number >> "))
             if number in numberlist :
                 break
-        mn = str(input("Please enter the mode >> "))
-        print("ex) RCDB")
+        mn = str(input("Please enter the mode ex) RCDB >> "))
 
         with open("input.gmd",'w') as fi :
-            fi.write("### Perovgen input\n")
-            fi.write("STRUC:\n")
-            for i in load_structure(args.input)[-1] :
-                fi.write(i)
-                fi.write("\n")
-            fi.write("\n")
-            fi.write("KPOINTS:\n40\n\n")
+            fi.write("### Perovgen input.gmd\n")
+            fi.write("KPOINTS:\nA\nCONSTK=30\n\n")
             fi.write("INCAR:\nMPJ\n\n")
             fi.write("SHELL:\n%s\n\n"%(shell[number-1][-1]))
-            fi.write("METHOD:\n%s\n"%(mn))
+            fi.write("CALMODE:\n%s\n"%(mn))
         fi.close()
 
     elif args.pdos :

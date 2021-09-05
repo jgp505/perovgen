@@ -103,9 +103,3 @@ class GMDExcitonbinding :
         array2 = np.array(ionic_n).astype(np.float)
         dielec = (np.sum(array1)+np.sum(array2))/3
         return dielec
-
-#class AbsorptionCoefficient : 
-#    def __init__(self, shell) :
-#        self.opticsh = os.system('plotopticsAsymmetriy.sh')
-
-#    def 

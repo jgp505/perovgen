@@ -7,7 +7,7 @@ from pymatgen.io.vasp.outputs import Vasprun
 from perovgen.pygmd.input_structure import GMDStructure, load_structure
 from perovgen.pygmd.shell import ShellPath
 from perovgen.pygmd.autocal.substitute import RandomMolecule, InputInform, RandomAtom
-from perovgen.pygmd.autocal.algorithm import controlincar, openingphrase
+from perovgen.pygmd.autocal.algorithm import openingphrase
 from perovgen.pygmd.autocal.inputset import *
 
 import time

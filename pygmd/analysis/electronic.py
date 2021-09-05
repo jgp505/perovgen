@@ -157,9 +157,9 @@ class BSPlotting :
 
         return band_inform
     
-    def printinform(self):
+    def printinform(self,path=os.getcwd()):
         bi = self._bandinform()
-        fi = open("band_inform.log","w") 
+        fi = open("{}/band_inform.log".format(path),"w") 
         fi.write("gmd plot options\n")
             
         bandgap = "%.3f(Indirect)"%(self.bsdict['band_gap']['energy'])

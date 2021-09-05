@@ -7,8 +7,6 @@ import pandas as pd
 from collections import defaultdict
 from pymatgen.core import Structure
 
-abspath = "/home/jgp505/Database/01_input"
-
 def load_structure(path):
     '''
     The structure file that exists in the PATH is read and return
@@ -16,7 +14,6 @@ def load_structure(path):
     
     Args :
         path(str) : OS.PATH
-        sformat(bool) : If True, the path including the structure file is given.
     '''
     struclist=[] ; spath=[]
     if type(path) == str :

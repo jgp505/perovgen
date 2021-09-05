@@ -191,21 +191,21 @@ def Process(inputs, strucpath, ds=False, orbit=False):
         # Copy the other files to generated folder
         if mt == "D" or mt=="B" or mt == "E" :
             copyfile(kpath_list[e],"{}/CHGCAR".format(folder_name))
-        if mt == "B" :
-            # Revise the KPOINTS for calculating band
-            MakingKpointBand(s,"{}/KPOINTS".format(folder_name))
-        elif mt == "E" :
-            # generate INPCAR file to execute emc-master modules
-            copyfile(kpath_list[e],"{}/CHGCAR".format(folder_name))
-            MakingInpcar(s,"{}/INPCAR".format(folder_name),nelect[e][1],kpoints[e][1])
-            copyfile(kpath_list[e],"{}/CHGCAR".format(folder_name_H))
-            MakingInpcar(s,"{}/INPCAR".format(folder_name_H),nelect[e][1],kpoints[e][1])
-        elif mt == 'D' :
-            # change the mode
-            kpoints = Kpoints.from_file("{}/KPOINTS".format(folder_name))
-            kpoints.style = Kpoints_supported_modes.Gamma
-            kpoints.write_file("{}/KPOINTS".format(folder_name))
-
+            if mt == "B" :
+                # Revise the KPOINTS for calculating band
+                MakingKpointBand(s,"{}/KPOINTS".format(folder_name))
+            elif mt == "E" :
+                # generate INPCAR file to execute emc-master modules
+                copyfile(kpath_list[e],"{}/CHGCAR".format(folder_name))
+                MakingInpcar(s,"{}/INPCAR".format(folder_name),nelect[e][1],kpoints[e][1])
+                copyfile(kpath_list[e],"{}/CHGCAR".format(folder_name_H))
+                MakingInpcar(s,"{}/INPCAR".format(folder_name_H),nelect[e][1],kpoints[e][1])
+            elif mt == 'D' :
+                # change the mode
+                kpoints = Kpoints.from_file("{}/KPOINTS".format(folder_name))
+                kpoints.style = Kpoints_supported_modes.Gamma
+                kpoints.write_file("{}/KPOINTS".format(folder_name))
+    
 
         for runf in runfolder :
             naming = runf.split("/")[-1]

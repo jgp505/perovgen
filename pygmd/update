@@ -80,3 +80,8 @@
 #2021-08-31 (Ver 3.6.2)
 1. Fix the bug in replace mode for subsituted elements
 2. Change the algorithm of input.gmd 
+
+#2021-09-01 (Ver. 3.6.4)
+1. Unifying shell script styles
+2. Add mode to input.gmd KPOINTS
+3. Fix the serial number algorithm when generating automatic calculation folder

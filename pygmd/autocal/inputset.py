@@ -15,145 +15,14 @@ import ast
 import yaml
 import numpy as np
 import pandas as pd
-from collections import defaultdict, Counter
+from collections import defaultdict
 
 from pymatgen.io.vasp.sets import MPRelaxSet
 from pymatgen.symmetry.bandstructure import HighSymmKpath
+from pymatgen.io.vasp.inputs import Kpoints, Incar, Kpoints_supported_modes
 
 from perovgen.pygmd.shell import ShellPath
-from perovgen.pygmd.input_structure import load_structure
-
-def read_input(inputpath):
-    f = open(inputpath)
-    ff = f.readlines()
-    dic=defaultdict(list)
-    repetit=[]
-
-    for i in ff :
-        n = i.split("\n")[0] # classficiation 
-        if "#" in n :
-            pass
-        else :
-            if ":" in n :
-                name = n.split(":")[0]
-                repetit.append(name)
-            else :
-                if n == '' : # delete the blank
-                    pass
-                else :
-                    try :
-                        if type(int(n)) == int :
-                            u = int(n)
-                        elif type(float(n)) == float :
-                            u = float(n)
-                        elif type(bool(n)) == bool :
-                            if n == "Ture" or n == "ture" :
-                                u = True
-                            else :
-                                u = False
-                        dic[name].append(u)
-                    except :
-                        if name == "METHOD":
-                            dic[name].extend(n)
-                        else : 
-                            dic[name].append(n)
-    # KPOINTS                
-    if not "KPOINTS" in [*dic] :
-        dic["KPOINTS"]=40
-
-    # Check the values
-    if [*dic] :
-        nonvalue=[i for i in [*dic] if not i in ["STRUC","INCAR","METHOD","SHELL","KPOINTS"]]
-        if len(nonvalue) >= 3  :
-            print(nonvalue, "doens't exist!")
-            sys.exit(1)
-    else :
-        print(["METHOD", "INCAR", "SHELL"],"doens't exist!")
-        sys.exit(1)
-    
-    # Remove repeating classes
-    c=Counter(repetit)
-    for k,v in c.items() :
-        if v != 1 :
-            print("{} overlapped. Please check input file".format(k))
-            sys.exit(0)
-    
-    else :
-        if len(dic["KPOINTS"]) != 1 :
-            print("KPOINTS value have to be one!")
-            sys.exit(0)
-    # SHELL 
-    if "SHELL" in [*dic] :
-        if len(dic["SHELL"]) != 1 :
-            print("SHELL value have to be one!")
-            sys.exit(0)
-
-    # MODE 
-    if "METHOD" in [*dic] :
-        modecheck = ["M","R","C","B","D","A","U","E",'G', # one mode
-        "RC","CB","CD","DB","BD","BE","EU","CA",'CG', # two mode
-        "RCB","RCD","CBD","CDB","DBE","CBE","BEU","RCA",'CBG', # THREE MODE
-        "RCBD","RCDB","CBEU","DBEU","RCBE","CDBE",'RCBG', # four mode
-        "RCBEU","RCDBE","CDBEU","RCBGE", # FIVE MODE
-        "RCDBEU",'RCDBGE',# SIX MODE
-        "RCADBEU"] # SEVEN MODE
-        mn = ''
-        for i in dic["METHOD"] :
-            mn+=i
-        if not mn in modecheck :
-            print("There isn't {} mode\nPlease Check your mode".format(dic["METHOD"]))
-            print("mode only :", modecheck)
-            sys.exit(0)
-        
-    if len(nonvalue) != 0 :
-        print(nonvalue, "doesn't exist! \nPlease enter the mode\n mode is",["KPOINTS","INCAR","METHOD","SHELL", "STRUC"])
-        sys.exit(0)
-    return dic
-
-class GMDIncar :
-    def __init__(self, gmdincar) :
-        if gmdincar["INCAR"][0] in ["PBESol","VDW","SCAN","PBE"]:
-            stream = open("%s/GMDincar.yaml"%(os.path.dirname(__file__)),'r')
-            incar = yaml.load(stream)
-            if gmdincar["INCAR"][0] == "PBE": 
-                pass
-            elif gmdincar["INCAR"][0] == "PBESol" :
-                incar["GGA"]='Ps'
-            elif gmdincar["INCAR"][0] == "VDW" :
-                incar["IVDW"]=21
-            elif gmdincar["INCAR"][0] == "SCAN" :
-                incar["METAGGA"] = "SCAN"
-                incar["LUSE_VDW"] = True
-                incar["BPARAM"]=15.7
-                incar["LASPH"]=True
-
-            if len(gmdincar["INCAR"]) != 1 :
-                incar1 = self._Incarmethod(gmdincar["INCAR"][1:])
-                for k,v in incar1.items() :
-                    incar[k]=v
-            else :
-                pass
-        else :
-            print("Please Enter the PBESol, PBE, VDW, SCAN, PBE, MPJ")
-            sys.exit(1)
-        self.incar = incar
-
-    def _Incarmethod(self,incarstring) :
-        incar = {}
-        for inc in incarstring :
-            n = inc.split("=")
-            try :
-                if type(int(n[1])) == int :
-                    u = int(n[1])
-                elif type(float(n[1])) == float :
-                    u = float(n[1])
-                incar[n[0]]=u
-            except :
-                if n[0] == "MAGMOM" :
-                    incar['MAGMOM']=ast.literal_eval(n[1])
-                else :
-                    incar[n[0]]=n[1]
-        return incar
+from perovgen.pygmd.input_structure import load_structure, GMDStructure
 
 def CopyCHGCAR(path):
     b = os.path.abspath(path)
@@ -172,19 +41,6 @@ def CopyCHGCAR(path):
             sys.exit(0)
     return chg_path
             
-def MakingKpointBand(structure,path):
-    kpath_info = HighSymmKpath(structure).kpath['kpoints']
-    kpath = HighSymmKpath(structure).kpath['path'][0]
-    if len(kpath) <= 5 :
-        kpath = HighSymmKpath(structure).kpath['path'][0]
-        kpath.extend(HighSymmKpath(structure).kpath['path'][1])
-    with open(path,'w') as fi :
-        fi.write("kpoints\n21\nL\nR\n")
-        for i in range(len(kpath)-1):
-            fi.write("%.3f %.3f %.3f !%s\n"%(kpath_info[kpath[i]][0],kpath_info[kpath[i]][1],kpath_info[kpath[i]][2],kpath[i]))
-            fi.write("%.3f %.3f %.3f !%s\n"%(kpath_info[kpath[i+1]][0],kpath_info[kpath[i+1]][1],kpath_info[kpath[i+1]][2],kpath[i+1]))
-            fi.write("\n")        
-
 def MakingInpcar(structure, path, nelect, kpoints):
     with open(path,'w') as fi :
         for i in kpoints :
@@ -193,6 +49,135 @@ def MakingInpcar(structure, path, nelect, kpoints):
         for i in structure.lattice.matrix :
             fi.write("%.5f %.5f %.5f\n"%(i[0],i[1],i[2]))
     fi.close()
+
+class inputgmd :
+    def GMDKpoints(self,kpoints) :
+        kpoint={"POINT":list(kpoints[0])[0]}
+            
+        for k in kpoints[1:] :
+            n,v = k.split("=")
+            n = n.replace(" ","")
+            v = v.replace(" ","")
+            if n == 'CONSTK':
+                kpoint[n]=int(v)
+            elif n == 'KPTS' :
+                kpoint[n]=ast.literal_eval(v)
+                    
+        if not "CONSTK" in [*kpoint] and "KPTS" in [*kpoint] :
+            kpoint['CONSTK']=False
+        elif "CONSTK" in [*kpoint] and not "KPTS" in [*kpoint]:
+            kpoint['KPTS']=False
+        return kpoint
+    
+    def string_to_dict(self,incars) :
+        incar = {}
+        for inc in incars :
+            n,v = inc.split("=")
+            n = n.replace(" ","")
+            v = v.replace(" ","")
+            
+            try :
+                if type(int(v)) == int :
+                    v = int(v)
+                elif type(float(v)) == float :
+                    v = float(v)
+                incar[n]=v
+                
+            except :
+                if n == "MAGMOM" : # list type
+                    incar['MAGMOM']=ast.literal_eval(v)
+                else :
+                    incar[n]=v
+        return incar
+    
+    def GMDIncar(self,incar) :
+        if incar[0] == "MPJ" :   
+            incars = {"ISMEAR":1}
+        else :
+            stream = open("%s/GMDincar.yaml"%(os.path.dirname(__file__)),'r')
+            incars = yaml.load(stream)
+            if incar[0] == "PBE" : 
+                pass
+            elif incar[0] == "PBESol" :
+                incars["GGA"]='Ps'
+            elif incar[0] == "VDW" :
+                incars["IVDW"]=21
+            elif incar[0] == "SCAN" :
+                incars["METAGGA"] = "SCAN"
+                incars["LUSE_VDW"] = True
+                incars["BPARAM"]=15.7
+                incars["LASPH"]=True
+                
+        if len(incar[1:]) != 0 :
+            incar1 = self.string_to_dict(incar[1:])
+            for k,v in incar1.items() :
+                incars[k]=v
+        return incars
+    
+    def __init__(self, path) :
+        self.path = path
+        f = open(path,'r')
+        ff = f.readlines()
+        self.inputgmd = defaultdict(list)
+    
+        self.class_type_list = ['KPOINTS','INCAR','SHELL','CALMODE']
+        self.modecheck = ["M","R","C","B","D","A","U","E",'G', # one mode
+            "RC","CB","CD","DB","BD","BE","EU","CA",'CG','RG', # two mode
+            "RCB","RCD","CBD","CDB","DBE","CBE","BEU","RCA",'CBG', # THREE MODE
+            "RCBD","RCDB","CBEU","DBEU","RCBE","CDBE",'RCBG', # four mode
+            "RCBEU","RCDBE","CDBEU","RCBGE", # FIVE MODE
+            "RCDBEU",'RCDBGE','RGCDBE',# SIX MODE
+            "RCADBEU"] # SEVEN MODE
+    
+        for i in ff :
+            line = i.split("\n")[0]
+            if not '#' in line :
+                if len(line.split(":")) == 2 :
+                    if line.split(":")[0] in self.class_type_list :
+                        classname = line.split(":")[0]
+                    else :
+                        print(line.split(":")[0],"doesn't exist class in the input.gmd")
+                        sys.exit(1)
+                else :
+                    if not line == '' :
+                        self.inputgmd[classname].append(line)
+
+        # Check the KPOINTS class
+        if not list(self.inputgmd['KPOINTS'][0])[0] in ["A", "G", "M"] :
+            print("KPOINTS first line have to type A(Auto) or G(Gamma) or M(Monkhorst)!")
+            sys.exit(1)
+        elif len(self.inputgmd['KPOINTS']) > 4 :
+            print("KPOINTS class can only have 3 or less values.")
+            sys.exit(1)
+        else :
+            self.kpoints = self.GMDKpoints(self.inputgmd['KPOINTS'])
+        
+        # Check the SHELL class
+        if len(self.inputgmd['SHELL']) != 1:
+            print("SHELL class must have only one value!")
+            sys.exit(1)
+        else :
+            self.shell = self.inputgmd['SHELL'][0]
+        
+        # Check the CALMODE class 
+        if not self.inputgmd['CALMODE'][0] in self.modecheck :
+            print("CALMODE calss is wrong mode!")
+            sys.exit(1)
+        else :
+            self.calmode = list(self.inputgmd['CALMODE'][0])
+
+        # Check the INCAR class
+        if not self.inputgmd['INCAR'][0] in ['PBE','PBESol','VDW','SCAN','MPJ'] :
+            print("INCAR first line have to type PBE or PBESol or VDW or SCAN or MPJ")
+            sys.exit(1)
+        else :  
+            self.exchange_corr = self.inputgmd['INCAR'][0]
+            self.incar = self.GMDIncar(self.inputgmd['INCAR'])
+            
+        self.inputgmd['KPOINTS'] = self.kpoints
+        self.inputgmd['INCAR'] = self.incar
+        self.inputgmd['SHELL'] = self.shell
+        self.inputgmd['CALMODE'] = self.calmode
 
 class PerovInputs :
     def __init__(self, structure, is_selective=False):
@@ -203,22 +188,28 @@ class PerovInputs :
             except : 
                 structure.replace(i, structure.species[i])
         self.poscar = structure
+
         if self.is_selective :
             for i in range(self.poscar.num_sites):
                 try :
                     self.poscar.replace(i,self.poscar.species[i].element, properties=None)
                 except :
                     self.poscar.replace(i,self.poscar.species[i],properties=None)
+        full_formula = GMDStructure(self.poscar).formula(reduced=False)
+        try :
+            symmetry, groupnumber = self.poscar.get_space_group_info()
+        except :
+            groupnumber = 0
+        self.naming = "{0}_{1:03d}".format(full_formula, groupnumber)
 
-    def _incarmode(incar, method):
+    def incarmode(self,incar, method):
         if method == "R" :
             pass
-            #incar["EDIFF"] = 1E-6
         elif method == "C":
             incar["NSW"] = 0
             incar["LCHARG"] = True
             incar["EDIFF"] = 1E-6
-        elif method == "B" or method == "E" or method == "D" or method == 'G':
+        elif method == "B" or method == "E" or method == "D":
             incar["NSW"] = 0
             incar["EDIFF"]=1E-6
             incar["LCHARG"] = False
@@ -236,8 +227,6 @@ class PerovInputs :
             incar["IBRION"]=8
             incar["LEPSILON"]=True
             incar["SIGMA"]=0.01
-            if "NCORE" in [*incar] :
-                del incar["NCORE"]
         elif method == "A" :
             incar["EDIFF"]=1E-8
             incar["LPEAD"]=True
@@ -256,42 +245,99 @@ class PerovInputs :
             incar['HFSCREEN']=0.2
             incar['TIME']=0.4
             incar['PRECFOCK']='FAST'
-        #elif method == "M" :
-        #    incar["EDIFF"]=1E-5
-        #    incar["ENCUT"]=400
-            
+        '''
+        elif method == "M" :
+            incar["EDIFF"]=1E-5
+            incar["ENCUT"]=400
+        '''
         return incar
 
-    def inputfolder(self, incar, number):
-        if "MAGMOM" in [*incar] :
-            magmom = incar['MAGMOM']
-            del incar['MAGMOM']
-        else :
-            magmom = None
-        mpr = MPRelaxSet(self.poscar, user_incar_settings=incar,user_potcar_functional=None)
+    def inputfolder(self, inputs, method, soc=False):
+        incar = self.incarmode(incar=inputs.incar,method=method) ; kpoints = inputs.kpoints
+        mpr = MPRelaxSet(self.poscar, user_incar_settings=incar,user_potcar_functional=None) #"PBE_52")
         vi = mpr.get_vasp_input()
-        if number == 'G' :
-            # number = 25 and even number
-            lattice = []
-            for l in ['a','b','c'] :
-                kl = self.poscar.as_dict()['lattice'][l]
-                if kl < 25 :
-                    if round(25/kl)%2 == 0 :
-                        lattice.append(round(25/kl))
+        if soc :
+            del vi['INCAR']['MAGMOM']
+        vi['KPOINTS'].comment = "{0}_{1}".format(method, self.naming)
+
+        if inputs.exchange_corr != 'MPJ' :
+            warning = '''
+                    [Warning] both CONSTK and KPTS exist in KPOINTS class in input.gmd.\n
+                    It is reflected as CONSTK.
+                    '''
+            if kpoints['CONSTK'] and kpoints['KPTS'] :
+                print(warning)
+
+            # KPOINTS mode
+            if kpoints['POINT'] == 'G' :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
+            elif kpoints['POINT'] == 'M' :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Monkhorst
+            elif kpoints['POINT'] == 'A' :
+                pass
+
+            # HSE06 and DOS calculation setting Gamma and kpoints 
+            if method == "G" :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
+                # CONSTK = 25 and even number
+                lattice = []
+                for l in ['a','b','c'] :
+                    kl = self.poscar.as_dict()['lattice'][l]
+                    if kl < 25 :
+                        if round(25/kl)%2 == 0 :
+                            lattice.append(round(25/kl))
+                        else :
+                            lattice.append(round(25/kl)+1)
                     else :
-                        lattice.append(round(25/kl)+1)
-                else :
-                    lattice.append(1)
-                    if not vi['INCAR']['NKREDX'] and vi['INCAR']['NKREDY'] :
-                        vi['INCAR']['NKREDX']=2
-                        vi['INCAR']['NKREDY']=2
-            vi["KPOINTS"].kpts[0] = lattice
-        elif number != None : 
-            lattice = [self.poscar.as_dict()['lattice'][l] for l in ['a','b','c']]
-            a,b,c = [i if i < number else number for i in lattice]
-            vi["KPOINTS"].kpts[0] = [round(number/a),round(number/b),round(number/c)]
-        if magmom :
-            vi['INCAR']['MAGMOM'] = magmom
+                        lattice.append(1)                            
+                        if not vi['INCAR']['NKREDX'] and vi['INCAR']['NKREDY'] :
+                            vi['INCAR']['NKREDX']=2
+                            vi['INCAR']['NKREDY']=2
+                vi["KPOINTS"].kpts[0] = lattice
+            elif method == 'D' :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
+                if (kpoints['CONSTK'] and kpoints['KPTS']) or kpoints['CONSTK']:
+                    number = kpoints['CONSTK']*2
+                    lattice = [self.poscar.as_dict()['lattice'][l] for l in ['a','b','c']]
+                    a,b,c = [i if i < number else number for i in lattice]
+                    vi["KPOINTS"].kpts[0] = [round(number/a),round(number/b),round(number/c)]
+                elif kpoints['KPTS'] :
+                    vi['KPOINTS'].kpts[0] = np.array(kpoints['KPTS'])*2
+            elif method == 'B' :
+                bandinfo = HighSymmKpath(self.poscar)
+                vi['KPOINTS']=vi['KPOINTS'].automatic_linemode(divisions=21,ibz=bandinfo)
+            else :
+                if (kpoints['CONSTK'] and kpoints['KPTS']) or kpoints['CONSTK']:
+                    number = kpoints['CONSTK']
+                    lattice = [self.poscar.as_dict()['lattice'][l] for l in ['a','b','c']]
+                    a,b,c = [i if i < number else number for i in lattice]
+                    vi["KPOINTS"].kpts[0] = [round(number/a),round(number/b),round(number/c)]
+                elif kpoints['KPTS'] :
+                    vi['KPOINTS'].kpts[0] = kpoints['KPTS']
+        else :
+            # HSE06 and DOS calculation setting Gamma and kpoints 
+            if method == "G" :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
+                # CONSTK = 25 and even number
+                lattice = []
+                for l in ['a','b','c'] :
+                    kl = self.poscar.as_dict()['lattice'][l]
+                    if kl < 25 :
+                        if round(25/kl)%2 == 0 :
+                            lattice.append(round(25/kl))
+                        else :
+                            lattice.append(round(25/kl)+1)
+                    else :
+                        lattice.append(1)                            
+                        if not vi['INCAR']['NKREDX'] and vi['INCAR']['NKREDY'] :
+                            vi['INCAR']['NKREDX']=2
+                            vi['INCAR']['NKREDY']=2
+                vi["KPOINTS"].kpts[0] = lattice
+            elif method == 'D' :
+                vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
+            elif method == 'B' :
+                bandinfo = HighSymmKpath(self.poscar)
+                vi['KPOINTS']=vi['KPOINTS'].automatic_linemode(divisions=21,ibz=bandinfo)
         return vi
 
 class RunningShell :
@@ -311,7 +357,7 @@ class RunningShell :
                 del nameline[-1]
         lines2=''
         for i in nameline :
-            lines2 += i+""
+            lines2 += i+" "
         lines2 += name + '\n'
         self.vaspsh_list.insert(name_index,lines2)
         self.path = path
@@ -365,10 +411,10 @@ class RunningShell :
     def running_mode(self,soc=False, run=True):
         pwd = os.getcwd()
         if soc : 
-            #self.write_vaspsh()
             self.SOC_read_vaspsh()
         else :
             self.write_vaspsh()
+
         if run :
             os.chdir(self.path)
             subprocess.check_call(['qsub','vasp.sh'])

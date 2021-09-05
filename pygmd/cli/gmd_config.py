@@ -2,6 +2,7 @@ import os
 import sys
 
 from perovgen.pygmd.shell import ShellPath
+import yaml
 
 def argsregistershell(args):
     sp = ShellPath()
@@ -18,4 +19,12 @@ def config(args):
         argsshellcheck(args.check)
     elif args.remove :
         ShellPath().remove()
+    elif args.generate :
+        if args.generate[0] == 'shell.yaml' :
+            with open(args.generate[0],'r') as f:
+                shell = yaml.load(f, Loader=yaml.FullLoader)
+            print(shell)
+            ShellPath().generateshell(shell=shell)
+        else :
+            print("Please load shell.yaml file")
 

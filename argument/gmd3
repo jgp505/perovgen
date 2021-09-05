@@ -14,18 +14,18 @@ from perovgen.pygmd.cli.gmd_analysis import analysis
 __author__ = "Green Materials Design Lab"
 __maintainer__ = "Park Jong Goo"
 __email__ = "jgp505@gmail.com"
-__version__ = "3.6.2"
+__version__ = "3.6.4"
 
 def main() :
     parser = argparse.ArgumentParser(
         description='''
-	gmd is a convenient script that uses gmdkit that uses 
+	gmd3 is a convenient script that uses perovgen that uses 
 	the pymatgen(https://pymatgen.org/) modules to perform 
 	many analyses, plotting and format conversions. Also, 
-	This script used exclusively in the GMD Lab. 
-	Because we research Organic-Inorganic hybrid halide Perovskite Materials, 
-	we focus on the that materials. This script works based on several 
-	sub-commands with their own options. To see the options for the sub-commands, type “gmd  sub-command -h”. 
+	This script used exclusively in the Green Materials Design Lab Team. 
+	We research Organic-Inorganic hybrid halide Perovskite Materials. 
+    This script works based on several sub-commands with their own options. 
+    To see the options for the sub-commands, type “gmd3 sub-command -h”. 
 	''',
         epilog = '''Version : {}'''.format(__version__)
     )
@@ -44,6 +44,11 @@ def main() :
     parser_config.add_argument("-r","--remove",dest='remove',
     action = 'store_true',
     help="Remove the Shell Script registered")
+    parser_config.add_argument("-g","--generate",dest='generate',
+    action = 'store',
+    nargs = 1,
+    default = False,
+    help="Generated shell")
     parser_config.set_defaults(func=config)
 
     # Plotting Option
@@ -147,17 +152,11 @@ def main() :
     If shell script is designated through config, 
     vasp calculation can be proceed with the [--run] command
     ''')
-    parser_auto.add_argument("-i","--input",dest="input",type=str,
-    help="read the input file (default : input.gmd). Input is composed of STRUC, INCAR, METHOD, SHELL, KPOINTS")
-    parser_auto.add_argument("-p","--path",dest="path",
-    type=str,
-    default = False,
-    nargs="*",
-    action = "store",
-    help='''
-    \n\nSpecifies the path of the structural file or files
-    Default is to bring the STRUC in the inputfile(input.gmd)\n
-    ''')
+    parser_auto.add_argument("-i",dest="inputpath",
+    help="read the input.gmd file. Input is composed of INCAR, CALMODE, SHELL, KPOINTS")
+    parser_auto.add_argument('-p',"--path",dest="strucpath",
+    nargs="*",action = "store",help=" \n\nSpecifies the path of the structural file or files Default is to bring the STRUC in the inputfile(input.gmd)\n")
+
     parser_auto.add_argument("-d","--directory",dest="directory",
     action="store_true",
     default=False,
@@ -179,8 +178,7 @@ def main() :
     choices = ['BD','B','D'],
     help = "Generate the graph.yaml that plot the bands structure.")
     parser_analysis.add_argument("-i","--input",dest='input',
-    action='store',
-    nargs='*',
+    action='store_true',
     default=False,
     help='generated input.gmd')
     parser_analysis.add_argument("-pdos",dest='pdos',

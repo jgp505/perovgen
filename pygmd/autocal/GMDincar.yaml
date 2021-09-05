@@ -10,7 +10,7 @@ ISTART: 0
 LCHARG: false
 LREAL: A
 LWAVE: false
-NSW: 500
+NSW: 200
 PREC: Accurate
 SIGMA: 0.05
 SYSTEM: Structure Optimization
