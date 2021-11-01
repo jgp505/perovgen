@@ -42,6 +42,7 @@ def molecule(args) :
             if not os.path.exists(vaspname):
                 os.makedirs(vaspname)
             molestruc.to(filename="{0}/POSCAR_{1}_{2:04d}".format(vaspname,vaspname,e+1))
+            strucpath.append("{0}/POSCAR_{1}_{2:04d}".format(vaspname,vaspname,e+1))
             if args.csv :
                 if not os.path.exists("{}/CSV".format(vaspname)):
                     os.makedirs("{}/CSV".format(vaspname))
@@ -63,13 +64,31 @@ def element(args):
             if not os.path.exists(vaspname) :
                 os.makedirs(vaspname)
             s1.to(filename="{0}/POSCAR_{1}_{2:04d}".format(vaspname,vaspname,e+1))
+            strucpath.append("{0}/POSCAR_{1}_{2:04d}".format(vaspname,vaspname,e+1))
             e+=1
-            #if args.input : 
-            #    strucpath.append(os.path.abspath("POSCAR_{0}_times{1:04d}".format(vaspname,i+1)))
     return strucpath
 
 def randomreplace(args) :
     if args.sub :
-        strucpath =element(args)
+        strucpath=element(args)
     else :
         strucpath=molecule(args)
+
+    if args.input :
+        inputs = inputgmd(args.input[0])
+        if inputs.calmode[0] == 'M' :
+            print(strucpath, inputs.calmode)
+        else :
+            print("If you want to calculate the molecule relaxed, please enter the M mode in CALMODE class")
+            sys.exit(1)
+        strucpath = load_structure(strucpath)
+        print(inputs.inputgmd)
+        for struc, filename in zip(strucpath[0], strucpath[-1]) :
+            for isif in ['ISIF7','ISIF2', 'ISIF3']:
+                if isif == 'ISIF7' :
+                    os.makedirs("ISIF7")
+                elif isif == 'ISIF2' :
+                    os.makedirs("ISIF2")
+
+
+

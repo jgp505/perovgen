@@ -34,7 +34,7 @@ from perovgen.pygmd.analysis.energy import GMDPhaseDiagram, GMDExcitonbinding
 def openingphrase(inputs, strucpath):
     
     text = """
-    version 3.6.4
+    version 3.6.8
          
                  W E C O M E 
                 Perovgen AUTO mode
@@ -90,27 +90,28 @@ def Process(calpath,inputspath, strucpath, ds=False, soc=False):
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    if not "C" in inputs.calmode :
-        for d in os.listdir(calpath) :
-            if os.path.isdir("{}/{}".format(calpath,d)):
-                mode = d.split("_")[0]
-                fn1 = '_'.join(d.split("_")[2:])
-                if mode == 'C' and fn == fn1 :
-                    chgpath = "{}/{}/CHGCAR".format(calpath,d)
-        if chgpath == None :
-            logger.info("C moode doens't exist")
-            sys.exit(1)
-
-    if not "B" in inputs.calmode :
-        for d in os.listdir(calpath) :
-            if os.path.isdir("{}/{}".format(calpath,d)):
-                mode = d.split("_")[0]
-                fn1 = '_'.join(d.split("_")[2:])
-                if mode == 'B' and fn == fn1 :
-                    bandpath = "{}/{}".format(calpath,d)
-        if bandpath == None :
-            logger.info("B moode doens't exist")
-            sys.exit(1)
+    if "B" in inputs.calmode or "D" in inputs.calmode or "E" in inputs.calmode :
+        if not "C" in inputs.calmode:
+            for d in os.listdir(calpath) :
+                if os.path.isdir("{}/{}".format(calpath,d)):
+                    mode = d.split("_")[0]
+                    fn1 = '_'.join(d.split("_")[2:])
+                    if mode == 'C' and fn == fn1 :
+                        chgpath = "{}/{}/CHGCAR".format(calpath,d)
+            if chgpath == None :
+                logger.info("C moode doens't exist")
+                sys.exit(1)
+    if "E" in inputs.calmode :
+        if not "B" in inputs.calmode :
+            for d in os.listdir(calpath) :
+                if os.path.isdir("{}/{}".format(calpath,d)):
+                    mode = d.split("_")[0]
+                    fn1 = '_'.join(d.split("_")[2:])
+                    if mode == 'B' and fn == fn1 :
+                        bandpath = "{}/{}".format(calpath,d)
+            if bandpath == None :
+                logger.info("B moode doens't exist")
+                sys.exit(1)
 
     for mt in inputs.calmode :
         os.chdir(calpath)
@@ -241,8 +242,8 @@ def Process(calpath,inputspath, strucpath, ds=False, soc=False):
         elif mt == 'B' :
             bandpath = os.path.split(path1[0])[0]
             bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(bandpath)), kpoints=os.path.abspath("{}/KPOINTS".format(bandpath)))
-            bsp.get_plot().savefig("{}/{}.pdf".format(calpath,fn))
-            bsp.get_plot().savefig("{}/{}.png".format(calpath,fn))
+            #bsp.get_plot().savefig("{}/{}.pdf".format(calpath,fn))
+            #bsp.get_plot().savefig("{}/{}.png".format(calpath,fn))
             bsp.printinform(path=calpath)
 
         elif mt == "D" or mt == "E" :

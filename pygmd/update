@@ -85,3 +85,6 @@
 1. Unifying shell script styles
 2. Add mode to input.gmd KPOINTS
 3. Fix the serial number algorithm when generating automatic calculation folder
+
+#2021-09-07 (Ver. 3.6.5)
+1. AutoMolOpt is developed
