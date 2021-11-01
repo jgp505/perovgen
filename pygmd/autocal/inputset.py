@@ -238,7 +238,8 @@ class PerovInputs :
         elif method == 'G' :
             incar['NKRED']=2
             incar['LHFCALC']=True
-            incar['ALGO']='All'
+            incar['ALGO']='D' # ver 3.6.8 
+            incar['NSW']=1 # one-shot hybrid 
             incar['ISYM']=0
             incar['SYMPREC']=1E-8
             incar['AEXX']=0.25
@@ -258,6 +259,7 @@ class PerovInputs :
         vi = mpr.get_vasp_input()
         if soc :
             del vi['INCAR']['MAGMOM']
+            vi['INCAR']['LSORBIT'] = True
         vi['KPOINTS'].comment = "{0}_{1}".format(method, self.naming)
 
         if inputs.exchange_corr != 'MPJ' :
@@ -290,9 +292,8 @@ class PerovInputs :
                             lattice.append(round(25/kl)+1)
                     else :
                         lattice.append(1)                            
-                        if not vi['INCAR']['NKREDX'] and vi['INCAR']['NKREDY'] :
-                            vi['INCAR']['NKREDX']=2
-                            vi['INCAR']['NKREDY']=2
+                        vi['INCAR']['NKREDX']=2
+                        vi['INCAR']['NKREDY']=2
                 vi["KPOINTS"].kpts[0] = lattice
             elif method == 'D' :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
@@ -329,9 +330,8 @@ class PerovInputs :
                             lattice.append(round(25/kl)+1)
                     else :
                         lattice.append(1)                            
-                        if not vi['INCAR']['NKREDX'] and vi['INCAR']['NKREDY'] :
-                            vi['INCAR']['NKREDX']=2
-                            vi['INCAR']['NKREDY']=2
+                        vi['INCAR']['NKREDX']=2
+                        vi['INCAR']['NKREDY']=2
                 vi["KPOINTS"].kpts[0] = lattice
             elif method == 'D' :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma

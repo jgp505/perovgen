@@ -136,10 +136,12 @@ def main() :
     parser_mole.add_argument("--csv","-c",dest="csv",
     action = "store_false", default= True,
     help = "Save the molecule information for CSV file")
-
-    #parser_mole.add_argument("-i","--input",dest="input",type=str,
-    #default=False,
-    #help="read the input file(input.gmd). Input is composed of STRUC, INCAR, METHOD, SHELL, KPOINTS")
+    parser_mole.add_argument("-i","--input",dest='input',
+    type=str,
+    default = False,
+    nargs=1,
+    action = "store",
+    help="read the input file(input.gmd)")
     parser_mole.set_defaults(func=randomreplace)
 
     # autocalculation
