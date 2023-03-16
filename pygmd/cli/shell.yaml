@@ -1,0 +1,11 @@
+shell_name: test
+node_name: [YOUR NODE NAME]
+
+node: 4
+ppn: 18
+
+vasp_std: [YOUR VASP PATH]
+vasp_ncl: [YOUR VASP PATH]
+vasp_gam: [YOUR VASP PATH]
+
+mpi_command: mpirun

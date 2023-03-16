@@ -92,12 +92,14 @@ class inputgmd :
     
     def GMDIncar(self,incar) :
         if incar[0] == "MPJ" :   
-            incars = {"ISMEAR":1}
+            incars = {"ISMEAR":0}
         else :
             stream = open("%s/GMDincar.yaml"%(os.path.dirname(__file__)),'r')
             incars = yaml.load(stream)
             if incar[0] == "PBE" : 
                 pass
+            elif incar[0] == 'PBED3' :
+                incar['IVDW']=12
             elif incar[0] == "PBESol" :
                 incars["GGA"]='Ps'
             elif incar[0] == "VDW" :
@@ -121,13 +123,8 @@ class inputgmd :
         self.inputgmd = defaultdict(list)
     
         self.class_type_list = ['KPOINTS','INCAR','SHELL','CALMODE']
-        self.modecheck = ["M","R","C","B","D","A","U","E",'G', # one mode
-            "RC","CB","CD","DB","BD","BE","EU","CA",'CG','RG', # two mode
-            "RCB","RCD","CBD","CDB","DBE","CBE","BEU","RCA",'CBG', # THREE MODE
-            "RCBD","RCDB","CBEU","DBEU","RCBE","CDBE",'RCBG', # four mode
-            "RCBEU","RCDBE","CDBEU","RCBGE", # FIVE MODE
-            "RCDBEU",'RCDBGE','RGCDBE',# SIX MODE
-            "RCADBEU"] # SEVEN MODE
+        self.modecheck = ['substitute_relax','bulkmodulus','relaxation','chgcar','dos','band',                          
+                          'effective_mass','dielectric','HSE','absorption','phonon']
     
         for i in ff :
             line = i.split("\n")[0]
@@ -160,11 +157,33 @@ class inputgmd :
             self.shell = self.inputgmd['SHELL'][0]
         
         # Check the CALMODE class 
-        if not self.inputgmd['CALMODE'][0] in self.modecheck :
-            print("CALMODE calss is wrong mode!")
-            sys.exit(1)
-        else :
-            self.calmode = list(self.inputgmd['CALMODE'][0])
+        mode_dict = dict()
+        for mode in self.inputgmd['CALMODE'] :
+            mode_name, boolen = mode.split("=")
+            mode_name = mode_name.replace(" ","")
+            boolen = boolen.replace(" ","")
+            if mode_name in self.modecheck :
+                if mode_name == 'bulkmodulus' :
+                    if boolen == 'T' or boolen == 'True' :
+                        mode_dict[mode_name] = np.arange(0.95,1.05,0.01) # default value in bulkmodulus
+                    elif boolen == 'F' or boolen == 'False' :
+                        pass
+                    else :
+                        end, start, val = boolen.split(",")
+                        mode_dict[mode_name] = np.arange(float(end),float(start),float(val))
+                else :
+                    if boolen == 'T' or boolen == 'True' :
+                        mode_dict[mode_name] = True
+                    elif boolen == 'F' or boolen == 'False' :
+                        pass
+                    else :
+                        print(boolen, "is wrong!")
+                        sys.exit(1)
+            else :
+                print(mode_name,"is wrong mode!")
+                print("Current version mode :", self.modecheck)
+                sys.exit(1)
+        self.calmode = mode_dict
 
         # Check the INCAR class
         if not self.inputgmd['INCAR'][0] in ['PBE','PBESol','VDW','SCAN','MPJ'] :
@@ -184,18 +203,18 @@ class PerovInputs :
         self.is_selective=is_selective
         for i in range(structure.num_sites):
             try : 
-                structure.replace(i, structure.species[i].element)
+                if is_selective : 
+                    structure.replace(i, structure.species[i].element, properties = None)
+                else : 
+                    structure.replace(i, structure.species[i].element, properties = structure[i].properties)
             except : 
-                structure.replace(i, structure.species[i])
+                if is_selective : 
+                    structure.replace(i, structure.species[i], properties = None)
+                else : 
+                    structure.replace(i, structure.species[i], properties = structure[i].properties)
         self.poscar = structure
 
-        if self.is_selective :
-            for i in range(self.poscar.num_sites):
-                try :
-                    self.poscar.replace(i,self.poscar.species[i].element, properties=None)
-                except :
-                    self.poscar.replace(i,self.poscar.species[i],properties=None)
-        full_formula = GMDStructure(self.poscar).formula(reduced=False)
+        full_formula = GMDStructure(self.poscar).formula(reduced=True)
         try :
             symmetry, groupnumber = self.poscar.get_space_group_info()
         except :
@@ -203,63 +222,76 @@ class PerovInputs :
         self.naming = "{0}_{1:03d}".format(full_formula, groupnumber)
 
     def incarmode(self,incar, method):
-        if method == "R" :
-            pass
-        elif method == "C":
+        if method == "relaxation" or method == 'substitute_relax':
+            incar['EDIFF'] = 1E-6
+            incar['EDIFFG'] = -0.01
+        elif method == 'bulkmodulus' :
+            incar['ISIF'] = 4
+        elif method == "chgcar":
             incar["NSW"] = 0
             incar["LCHARG"] = True
             incar["EDIFF"] = 1E-6
-        elif method == "B" or method == "E" or method == "D":
+        elif method == "band" or method == "effective_mass" or method == "dos":
             incar["NSW"] = 0
             incar["EDIFF"]=1E-6
             incar["LCHARG"] = False
             incar["ICHARG"] = 11
             incar["SIGMA"]=0.01
             incar["ISMEAR"] = 0
-            if method == "D" :
+            if method == "dos" :
                 incar["SIGMA"]=0.01
                 incar["ISMEAR"] = -5
-        elif method == "U" :
+                incar['LORBIT'] = 11
+        elif method == "dielectric" :
             incar["LREAL"] = False
-            incar["NSW"] = 0 
+            incar["NSW"] = 1 
             incar["EDIFF"]=1E-8
             incar["ISMEAR"]=0
             incar["IBRION"]=8
             incar["LEPSILON"]=True
             incar["SIGMA"]=0.01
-        elif method == "A" :
+        elif method == "absorption" :
             incar["EDIFF"]=1E-8
             incar["LPEAD"]=True
             incar["NEDPS"]=2000
             incar["LOPTICS"]=True
             incar["CSHIFT"]=0.100
             incar["SIGMA"]=0.01
-            incar["LSORBIT"]=True
-        elif method == 'G' :
+            incar['NSW'] = 200 
+        elif method == 'HSE' :
             incar['NKRED']=2
             incar['LHFCALC']=True
-            incar['ALGO']='D' # ver 3.6.8 
+            incar['ALGO']='D' # ver 3.6.8
             incar['NSW']=1 # one-shot hybrid 
-            incar['ISYM']=0
+            #incar['ISYM']=0 # ver 3.8.1
             incar['SYMPREC']=1E-8
             incar['AEXX']=0.25
             incar['HFSCREEN']=0.2
             incar['TIME']=0.4
             incar['PRECFOCK']='FAST'
-        '''
-        elif method == "M" :
-            incar["EDIFF"]=1E-5
-            incar["ENCUT"]=400
-        '''
+        elif method == 'phonon' :
+            incar['EDIFF'] = 1E-8
+            incar['IALGO'] = 38
+            incar['PREC'] = 'Accurate'
+            incar['ADDGRID'] = True
+            incar['NSW'] = 1
+            incar['IBRION'] = 8
         return incar
 
     def inputfolder(self, inputs, method, soc=False):
         incar = self.incarmode(incar=inputs.incar,method=method) ; kpoints = inputs.kpoints
-        mpr = MPRelaxSet(self.poscar, user_incar_settings=incar,user_potcar_functional=None) #"PBE_52")
-        vi = mpr.get_vasp_input()
+        if 'MAGMOM' in [*inputs.incar] :
+            magmom = inputs.incar['MAGMOM']
+            del inputs.incar['MAGMOM']
+            mpr = MPRelaxSet(self.poscar, user_incar_settings=incar,user_potcar_functional=None) #"PBE_52")
+            vi = mpr.get_vasp_input()
+            vi['INCAR']['MAGMOM']=magmom
+        else :
+            mpr = MPRelaxSet(self.poscar, user_incar_settings=incar,user_potcar_functional=None) #"PBE_52")
+            vi = mpr.get_vasp_input()
         if soc :
-            del vi['INCAR']['MAGMOM']
             vi['INCAR']['LSORBIT'] = True
+            del vi['INCAR']['MAGMOM']
         vi['KPOINTS'].comment = "{0}_{1}".format(method, self.naming)
 
         if inputs.exchange_corr != 'MPJ' :
@@ -279,7 +311,7 @@ class PerovInputs :
                 pass
 
             # HSE06 and DOS calculation setting Gamma and kpoints 
-            if method == "G" :
+            if method == "HSE" :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
                 # CONSTK = 25 and even number
                 lattice = []
@@ -295,7 +327,7 @@ class PerovInputs :
                         vi['INCAR']['NKREDX']=2
                         vi['INCAR']['NKREDY']=2
                 vi["KPOINTS"].kpts[0] = lattice
-            elif method == 'D' :
+            elif method == 'dos' :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
                 if (kpoints['CONSTK'] and kpoints['KPTS']) or kpoints['CONSTK']:
                     number = kpoints['CONSTK']*2
@@ -304,7 +336,7 @@ class PerovInputs :
                     vi["KPOINTS"].kpts[0] = [round(number/a),round(number/b),round(number/c)]
                 elif kpoints['KPTS'] :
                     vi['KPOINTS'].kpts[0] = np.array(kpoints['KPTS'])*2
-            elif method == 'B' :
+            elif method == 'band' :
                 bandinfo = HighSymmKpath(self.poscar)
                 vi['KPOINTS']=vi['KPOINTS'].automatic_linemode(divisions=21,ibz=bandinfo)
             else :
@@ -317,7 +349,7 @@ class PerovInputs :
                     vi['KPOINTS'].kpts[0] = kpoints['KPTS']
         else :
             # HSE06 and DOS calculation setting Gamma and kpoints 
-            if method == "G" :
+            if method == "HSE" :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
                 # CONSTK = 25 and even number
                 lattice = []
@@ -333,9 +365,9 @@ class PerovInputs :
                         vi['INCAR']['NKREDX']=2
                         vi['INCAR']['NKREDY']=2
                 vi["KPOINTS"].kpts[0] = lattice
-            elif method == 'D' :
+            elif method == 'dos' :
                 vi['KPOINTS'].style = Kpoints_supported_modes.Gamma
-            elif method == 'B' :
+            elif method == 'band' :
                 bandinfo = HighSymmKpath(self.poscar)
                 vi['KPOINTS']=vi['KPOINTS'].automatic_linemode(divisions=21,ibz=bandinfo)
         return vi
@@ -361,6 +393,21 @@ class RunningShell :
         lines2 += name + '\n'
         self.vaspsh_list.insert(name_index,lines2)
         self.path = path
+     
+    def check_ncl_path(self) :
+        # add function in 20220203
+        ncl_line = False
+        for i in range(len(self.vaspsh_list)) :
+            if 'ncl' in self.vaspsh_list[i] :
+                ncl_line = self.vaspsh_list[i].split("#")
+        if ncl_line == False :
+            print("NCL PATH is not exist! Please enter the NCL PATH")
+            return ncl_line
+        else :
+            ncl_path = list(ncl_line[-1])[5:-2]
+            ncl_path = "".join(ncl_path)
+            is_path = os.path.isfile(ncl_path)
+            return is_path
 
     def write_vaspsh(self):
         with open("{}/vasp.sh".format(self.path),"w") as fi :
@@ -369,44 +416,45 @@ class RunningShell :
         fi.close()
 
     def SOC_read_vaspsh(self):
-        for i in range(len(self.vaspsh_list)):
-            if 'std' in self.vaspsh_list[i] :
-                std_line = self.vaspsh_list[i].split("#")
-                if len(std_line) == 1 :
-                    a = list(std_line[0])
-                    a.insert(0,"#")
-                    aa=""
-                    for j in a :
-                        aa += j
-                    self.vaspsh_list[i] = aa
-                else :
-                    pass
-            elif 'ncl' in self.vaspsh_list[i] :
-                ncl_line = self.vaspsh_list[i].split("#")
-                if len(ncl_line) == 1 :
-                    a = list(std_line[0])
-                    a.insert(0,"#")
-                    aa=""
-                    for j in a :
-                        aa += j
-                    self.vaspsh_list[i] = aa
-                else :
-                    self.vaspsh_list[i] = ncl_line[-1]
-            if 'gam' in self.vaspsh_list[i] :
-                std_line = self.vaspsh_list[i].split("#")
-                if len(std_line) == 1 :
-                    a = list(std_line[0])
-                    a.insert(0,"#")
-                    aa=""
-                    for j in a :
-                        aa += j
-                    self.vaspsh_list[i] = aa
-                else :
-                    pass
-        with open("{}/vasp.sh".format(self.path),"w") as fi :
-            for i in self.vaspsh_list :
-                fi.write(i)
-        fi.close()
+        if self.check_ncl_path() :
+            for i in range(len(self.vaspsh_list)):
+                if 'std' in self.vaspsh_list[i] :
+                    std_line = self.vaspsh_list[i].split("#")
+                    if len(std_line) == 1 :
+                        a = list(std_line[0])
+                        a.insert(0,"#")
+                        aa=""
+                        for j in a :
+                            aa += j
+                        self.vaspsh_list[i] = aa
+                    else :
+                        pass
+                elif 'ncl' in self.vaspsh_list[i] :
+                    ncl_line = self.vaspsh_list[i].split("#")
+                    if len(ncl_line) == 1 :
+                        a = list(std_line[0])
+                        a.insert(0,"#")
+                        aa=""
+                        for j in a :
+                            aa += j
+                        self.vaspsh_list[i] = aa
+                    else :
+                        self.vaspsh_list[i] = ncl_line[-1]
+                if 'gam' in self.vaspsh_list[i] :
+                    std_line = self.vaspsh_list[i].split("#")
+                    if len(std_line) == 1 :
+                        a = list(std_line[0])
+                        a.insert(0,"#")
+                        aa=""
+                        for j in a :
+                            aa += j
+                        self.vaspsh_list[i] = aa
+                    else :
+                        pass
+            with open("{}/vasp.sh".format(self.path),"w") as fi :
+                for i in self.vaspsh_list :
+                    fi.write(i)
+            fi.close()
 
     def running_mode(self,soc=False, run=True):
         pwd = os.getcwd()
@@ -417,6 +465,6 @@ class RunningShell :
 
         if run :
             os.chdir(self.path)
-            subprocess.check_call(['qsub','vasp.sh'])
-            #os.system("qsub < vasp.sh")
+            #subprocess.check_call(['qsub','vasp.sh'])
+            os.system("qsub < vasp.sh")
             os.chdir(pwd)

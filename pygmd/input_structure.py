@@ -1,3 +1,7 @@
+# coding: utf-8
+# Cppyright (c) Green Materials Designs Team.
+# Hanbat National University, Korea 
+
 import os
 import sys
 
@@ -5,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from collections import defaultdict
+from mendeleev.fetch import fetch_table
 from pymatgen.core import Structure
 
 def load_structure(path):
@@ -25,11 +30,6 @@ def load_structure(path):
             if os.path.isfile(path1):
                 try :
                     s = Structure.from_file(path1)
-                    for i in range(s.num_sites) :
-                        try :
-                            s.replace(i, s.species[i].element)
-                        except :
-                            s.replace(i, s.species[i])
                     struclist.append(s)
                     spath.append(path1)
                 except :
@@ -38,11 +38,6 @@ def load_structure(path):
                 for j in os.listdir(path1):
                     try :
                         s = Structure.from_file("%s/%s"%(p,j))
-                        for i in range(s.num_sites) :
-                            try :
-                                s.replace(i, s.species[i].element)
-                            except :
-                                s.replace(i, s.species[i])
                         struclist.append(s)
                         spath.append(j)
                     except :
@@ -50,15 +45,52 @@ def load_structure(path):
     return struclist, spath
 
 class GMDStructure :
-    '''
+    """
     This module provides structural files(ex. cif, POSCAR) 
     needed for automatic calculation
-    '''
+        """
     def __init__(self, structure):
-        structure.sort()
         self.structure = structure
+        self.structure.sort()
         self.coords = np.dot(self.structure.frac_coords, self.structure.lattice.matrix)
         self.species = self.structure.species
+        
+    def organizing(self, sort=None) :
+        new_species = []
+        for e in self.structure.species :
+            if not e.symbol in new_species :
+                new_species.append(e.symbol)
+        element = fetch_table("elements")[['atomic_number','symbol']].set_index("symbol").to_dict()['atomic_number'] 
+        if sort != None :
+            element = dict()
+            for i,e in enumerate(sort) :
+                if not e in new_species :
+                    return False
+                else :
+                    element[e]=i
+        new_species.sort(key=lambda x : element[x])
+        indexes1 = defaultdict(list)
+        for i in range(self.structure.num_sites) :
+            indexes1[self.structure.species[i].symbol].append(i)
+    
+        indexes = dict()
+        for k1 in new_species :
+            indexes[k1]=indexes1[k1]
+    
+        struc_data = defaultdict(list)
+        for k in new_species :
+            for v in indexes[k] :
+                struc_data['species'].append(self.structure[v].specie)
+                struc_data['coords'].append(self.structure[v].coords.tolist())
+                if self.structure[v].properties :
+                    for k1 in [*self.structure[v].properties] :
+                        struc_data[k1].append(self.structure[v].properties[k1])
+        if len([*struc_data]) == 2 :
+            struc = Structure(self.structure.lattice.matrix, struc_data['species'], struc_data['coords'], coords_are_cartesian=True)
+        else :
+            struc = Structure(self.structure.lattice.matrix, struc_data['species'], struc_data['coords'], 
+                          site_properties={'selective_dynamics':struc_data['selective_dynamics']}, coords_are_cartesian=True)
+        return struc
 
     def _split_molecule(self):
         d = self.structure.distance_matrix
@@ -109,8 +141,12 @@ class GMDStructure :
             else :
                 molecule[k]=len(v)
         return molecule
-    def formula_dict(self) :
-        sn = self.structure.composition.get_el_amt_dict()
+    
+    def formula_dict(self,reduced=True) :
+        if reduced :
+            sn = self.structure.composition.to_reduced_dict
+        else :
+            sn = self.structure.composition.get_el_amt_dict()
         sn_dict = dict()
         if 'C' in sn and 'H' in sn and 'N' in sn : 
             mole=self._split_molecule()
@@ -144,21 +180,22 @@ class GMDStructure :
                     sn['N']-=v*2
                     sn['H']-=v*5
                 sn_dict[k]=v
-            if sn['C'] == 0 :
+            if sn['C'] <= 0 :
                 del sn['C']
             else :
                 sn_dict['C'] = sn['C']
-            if sn['H'] == 0 :
+            if sn['H'] <= 0 :
                 del sn['H']
             else :
                 sn_dict['H'] = sn['H']
-            if sn['N'] == 0 :
+            if sn['N'] <= 0 :
                 del sn['N']
             else :
                 sn_dict['N'] = sn['N']
         for k,v in sn.items():
             sn_dict[k]=v
         return sn_dict
+    
     def formula(self, reduced=True):
         if reduced :
             sn = self.structure.composition.to_reduced_dict

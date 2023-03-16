@@ -55,7 +55,19 @@ class ShellPath :
         print("{} scirpt is deleted".format(shell[r-1][-1]))
 
     def generateshell(self, shell) :
-
+        
+        # add function in 20220203
+        if not os.path.isfile(shell['vasp_std']) :
+            print(shell['vasp_std'],"is not file")
+            sys.exit(1)
+        elif not os.path.isfile(shell['vasp_ncl']):
+            print(shell['vasp_ncl'],"is not file")
+            sys.exit(1)
+        elif not os.path.isfile(shell['vasp_gam']):
+            print(shell['vasp_gam'],"is not file")
+            sys.exit(1)
+        # 
+        
         while True :
             regist = input(str("Please enter Y to register shell script, otherwise enter N >> "))
             if regist == 'Y' :
@@ -92,6 +104,3 @@ class ShellPath :
             sh.write("echo job ended at `date` >> time\n")
     
         sh.close()
-
-
-                
