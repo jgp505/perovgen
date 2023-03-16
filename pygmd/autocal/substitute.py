@@ -131,7 +131,10 @@ class InputInform :
             change = float(input("Enter the change ratio(ex.0.7) >> "))
             if change > 1 :
                 change = 1
-        times = self.ask_times(change)
+        if change != 1 :
+            times = self.ask_times(change)
+        else :
+            times = 1
         return original, substitute, change, times
 
 class RandomMolecule:

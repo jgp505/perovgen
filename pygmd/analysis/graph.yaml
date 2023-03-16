@@ -36,4 +36,13 @@ D:
   xlim: *id002
   ylim: null
   zero_to_efermi: true
-name: All
+A:
+  fig_size : &id003 !!python/tuple
+  - 8
+  - 6
+  fontsize : 14
+  xlim : &id004 !!python/tuple
+  - 0
+  - 5
+  ylim : null
+  sharex : True

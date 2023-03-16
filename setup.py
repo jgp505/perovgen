@@ -6,8 +6,8 @@ from setuptools import setup, find_packages
 
 setup(
 	name = "perovgen",
-	version = "3.6.4",
-	license = "Hanbat National Univ.",
+	version = "3.8.4",
+	license = "Hanbat National University",
 	description = "Automated VASP Program with Pymatgen",
 	author = "Jong Goo Park",
 	author_email = "jgp505@gmail.com",

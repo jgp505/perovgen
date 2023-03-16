@@ -27,4 +27,12 @@ def config(args):
             ShellPath().generateshell(shell=shell)
         else :
             print("Please load shell.yaml file")
-
+            
+    elif args.first : 
+        path = os.path.abspath(__file__).split(os.sep)[:-3]
+        path.append("pdos")
+        path = os.sep.join(path)
+        
+        for f in os.listdir(path) :
+            os.chmod("%s/%s"%(path,f),0o0777)
+        #os.chmod()

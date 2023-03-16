@@ -32,147 +32,102 @@ from perovgen.pygmd.analysis.energy import GMDPhaseDiagram, GMDExcitonbinding
 from perovgen.pygmd.autocal.algorithm import openingphrase, Recalculate, fileopen
 
 def Process(calpath,inputspath, strucpath, ds=False, soc=False):
-    inputs = inputgmd(inputspath); struc, filename = load_structure(strucpath)[0][0], load_structure(strucpath)[1][0]
+    
+    struc, filename = load_structure(strucpath)[0][0], load_structure(strucpath)[1][0]
+    inputs = inputgmd(inputspath)
     fn = os.path.basename(filename).split(".")[0]
-    chgpath = None ; bandpath = None
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
-
-    file_handler = logging.FileHandler('{}/{}.log'.format(calpath,fn))
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    if not "C" in inputs.calmode :
-        for d in os.listdir(calpath) :
-            if os.path.isdir("{}/{}".format(calpath,d)):
-                mode = d.split("_")[0]
-                fn1 = '_'.join(d.split("_")[2:])
-                if mode == 'C' and fn == fn1 :
-                    chgpath = "{}/{}/CHGCAR".format(calpath,d)
-        if chgpath == None :
-            logger.info("C moode doens't exist")
-            sys.exit(1)
-
-    if not "B" in inputs.calmode :
-        for d in os.listdir(calpath) :
-            if os.path.isdir("{}/{}".format(calpath,d)):
-                mode = d.split("_")[0]
-                fn1 = '_'.join(d.split("_")[2:])
-                if mode == 'B' and fn == fn1 :
-                    bandpath = "{}/{}".format(calpath,d)
-        if bandpath == None :
-            logger.info("B moode doens't exist")
-            sys.exit(1)
-
-    for mt in inputs.calmode :
-        os.chdir(calpath)
-        runfolder = []
-
-        if mt == 'E' :
-            nelect1 = Eigenval("{}/EIGENVAL".format(bandpath)).nelect
-            if soc :
-                nelect = (int(nelect1),int(nelect1)+1)
-            else :
-                nelect = (int(nelect1/2),int(nelect1/2)+1)
-
-            bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(bandpath)), kpoints=os.path.abspath("{}/KPOINTS".format(bandpath)))
-            try : 
-                vbm = bsp.bs.kpoints[bsp.bsdict['vbm']['kpoint_index'][0]].as_dict()['fcoords']
-            except : 
-                vbm = [0.000, 0.000, 0.000]
-            try :
-                cbm = bsp.bs.kpoints[bsp.bsdict['cbm']['kpoint_index'][0]].as_dict()['fcoords']
-            except : 
-                cbm = [0.000, 0.000, 0.000]
-            kpoints = (vbm, cbm)
-
-        p = PerovInputs(structure=struc,is_selective=ds)
-
-        # Revised INPUT FILES
-        vi = p.inputfolder(inputs=inputs, method=mt,soc=soc)
+    for k,v in inputs.calmode.items() :
+        poscar = PerovInputs(struc)
         inputs = inputgmd(inputspath)
+        naming = poscar.naming + "_" + fn
+        
+        runfolder = []
+        if k == 'bulkmodulus' :
+            volumes = v*poscar.poscar.volume
+            for v1, vol in zip(v, volumes) :
+                struc.scale_lattice(vol)
+                PI = PerivInputs(struc)
+                vi = PI.inputfolder(inputs=inputs, method=k, soc=soc)
+                folder_name = "%s/%s/%.2f"%(calpath,k,v1)
+                vi.write_input(folder_name)
+                runfolder.append(folder_name)
 
-        try :
-            symmetry, groupnumber = struc.get_space_group_info()
-        except :
-            groupnumber = 0
-
-        # Designate the folder name
-        full_formula = GMDStructure(struc).formula(reduced=False)
-        pretty_formula = GMDStructure(struc).formula()
+        elif k == 'dos' or k == 'band' or k == 'effective_mass' :
+            vi = poscar.inputfolder(inputs=inputs, method=k, soc=soc)
+            if k == 'effective_mass' :
+                folder_name_elec = "%s/chgcar/%s/electron"%(calpath,k)
+                folder_name_hole = "%s/chgcar/%s/hole"%(calpath,k)
+                
+                # CBM effective mass
+                vi.write_input(folder_name_elec)
+                copy("%s/chgcar/CHGCAR"%(calpath), folder_name_elec)
+                copy("%s/chgcar/INPCAR_ele"%(calpath), "%s/INPCAR"%(folder_name_elec))
+                runfolder.append(folder_name_elec)
+                
+                # VBM effective mass
+                vi.write_input(folder_name_hole)
+                copy("%s/chgcar/CHGCAR"%(calpath), folder_name_hole)
+                copy("%s/chgcar/INPCAR_hole"%(calpath), "%s/INPCAR"%(folder_name_hole))
+                runfolder.append(folder_name_hole)
+            else :
+                folder_name = "%s/chgcar/%s"%(calpath,k)
+                vi.write_input(folder_name)
+                copy("%s/chgcar/CHGCAR"%(calpath),folder_name)
+                runfolder.append(folder_name)
+        else :
+            folder_name = "%s/%s"%(calpath,k)
+            vi = poscar.inputfolder(inputs=inputs, method=k, soc=soc)
+            vi.write_input(folder_name)
+            runfolder.append(folder_name)
             
-        if "{0}_{1}_{2:02d}".format(mt,full_formula,groupnumber) in os.listdir(calpath) :
-            logging.info("{0}_{1}_{2:02d} is already exists!".format(mt, full_formula, groupnumber))
-            sys.exit(1)
-        folder_name = "{0}/{1}_{2}_{3:02d}".format(calpath,mt,full_formula,groupnumber) 
-
-        vi.write_input(output_dir=folder_name)
-        runfolder.append(folder_name)
-
-        if mt == "E" :
-            folder_name_H = "{0}/H_{1}_{2:02d}".format(calpath,full_formula,groupnumber) 
-            vi.write_input(output_dir=folder_name_H)
-            runfolder.append(folder_name_H)
-
-        # Copy the other files to generated folder
-        if mt == "D" or mt=="B" :
-            copyfile(chgpath,"{}/CHGCAR".format(folder_name))
-        elif mt == "E" :
-            copyfile(chgpath,"{}/CHGCAR".format(folder_name))
-            copyfile(chgpath,"{}/CHGCAR".format(folder_name_H))
-            MakingInpcar(struc,"{}/INPCAR".format(folder_name),nelect[1], kpoints[1])
-            MakingInpcar(struc,"{}/INPCAR".format(folder_name_H),nelect[0], kpoints[0])
-            logging.info("INPCAR is generated in {} mode ".format(mt))
-
+        # Running
+        e = 0
         for runf in runfolder :
-            if mt == 'E' :
-                emc = GMDAnalysis() 
-                emc.effectivemass(path="{}".format(runf),secondstep=False)
-                logging.info("KPOINTS is fixed in {} mode ".format(mt))
-            naming = os.path.basename(runf)
-            rs = RunningShell(shell=inputs.shell, name=naming, path=runf)
-            rs.running_mode(soc=soc, run=True)
-            logging.info("{} mode calculation is being started".format(mt))
-
+            if k == 'bulkmodulus' :
+                rs = RunningShell(shell=inputs.shell, name="%s_%s_%.2f"%(naming,k,v[e]),path=runf)
+                e += 1
+            elif k == 'effective_mass' :
+                emc = GMDAnalysis()
+                emc.effectivemass(runf, secondstep=False)
+                rs = RunningShell(shell=inputs.shell, name="%s_%s"%(naming,k), path = runf)
+            else :
+                rs = RunningShell(shell=inputs.shell, name="%s_%s"%(naming,k), path = runf)
+            rs.running_mode(soc=soc, run=True) # If run is true, running the calculation
+            
         # Running Check
         while True :
             time.sleep(10)
-            path1 = [] 
-            for j in runfolder :
-                os.chdir(os.path.join(calpath,j))
-                try :
-                    vrun = Vasprun("%s/vasprun.xml"%(os.path.join(calpath,j)),parse_potcar_file=True)
+            path1 = []
+            for realpath in runfolder :
+                os.chdir(realpath)
+                try : 
+                    vrun = Vasprun("%s/vasprun.xml"%(realpath),parse_potcar_file=True)
                     ionicsteps = vrun.nionic_steps
                     nsw = vrun.incar['NSW']
                     if nsw == 1 :
-                        path1.append("%s/CONTCAR"%(os.path.join(calpath,j)))
+                        path1.append("%s/CONTCAR"%(realpath))
+                        os.remove("%s/CHG"%(realpath))
                     elif nsw == ionicsteps :
-                        print("[Notice] Realculation because ionic step is same NSW value")
-                        logging.info("{} mode calculation is recalulated (ionic step is over)".format(mt))
+                        print("[NOTICE] Recalculation")
                         Recalculate()
                         time.sleep(10)
                     else :
-                        path1.append("%s/CONTCAR"%(os.path.join(calpath,j)))
-                except ET.ParseError:
-                    # Error Check in R-mode
-                    if mt == "R" :
+                        path1.append("%s/CONTCAR"%(realpath))
+                        os.remove("%s/CHG"%(realpath))
+                except ET.ParseError :
+                    # Error check in R-mode
+                    if k == 'relaxation' :
                         boolen, targetlist = fileopen("OUTCAR","accuracy")
-                        if not boolen : 
+                        if not boolen :
                             try :
                                 number = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
                                 number1 = number.split()[0]
                                 time.sleep(180)
                                 number2 = subprocess.check_output(['tail','-n','1','OSZICAR']).decode('utf-8')
-                                number3 = number2.split()[0]
-                                if int(number1) == int(number3) :
-                                    print("[Notice] Reculation because it has not yet obtained a stabilizing structure.")
-                                    logging.info("{} mode calculation is recalculated (unstbilized tructure)".format(mt))
+                                number2 = number2.split()[0]
+                                if int(number1) == int(number2) :
+                                    print("[NOTICE] Recalculation")
                                     Recalculate()
                                     time.sleep(10)
                                 else :
@@ -180,44 +135,87 @@ def Process(calpath,inputspath, strucpath, ds=False, soc=False):
                             except :
                                 pass
                         else :
-                            path1.append("%s/CONTCAR"%(os.path.join(calpath,j)))
-                    else :
-                        pass
-                except FileNotFoundError :
+                            path1.append("%s/CONTCAR"%(realpath))
+                            os.remove("%s/CHG"%(realpath))
+                except :
                     pass
-                except AttributeError :
-                    pass
-
             if len(runfolder) == len(path1) :
-                os.chdir(calpath)
-                logger.info("{} mode is calculated".format(mt))
+                os.chdir(os.getcwd())
                 break
+            
+        # Ananlysis
+        if k == 'bulkmodulus' :
+            os.chdir("%s/%s"%(calpath, k))
+            direct = [f for f in os.listdir(".") if os.path.isdir(f)]
+            direct.sort()
+            energy, volume = [], []
+            for d in direct :
+                vrun = Vasprun("%s/vasprun.xml"%(d))
+                energy.append(vrun.final_energy)
+                volume.append(vrun.final_structure.volume)
+                struc = vrun.final_structure        
 
-        # Properties for DOS and effective mass
-        if mt == "C" :
-            chgpath = CopyCHGCAR(path1[0])
-        elif mt == 'B' :
-            bandpath = os.path.split(path1[0])[0]
-            bsp = BSPlotting(vasprun=os.path.abspath("{}/vasprun.xml".format(bandpath)), kpoints=os.path.abspath("{}/KPOINTS".format(bandpath)))
-            #bsp.get_plot().savefig("{}/BS.pdf".format(calpath))
-            bsp.printinform(path=calpath)
-
-        elif mt == "D" or mt == "E" :
-            for i in runfolder :
-                i = os.path.abspath(i)
-                analysis_path = GMDAnalysis()
-                if mt == "D" :
-                    os.chdir(i)
-                    os.system("%s dos width=0.03"%(analysis_path.pdos))
-                    analysis_path.partialDOS(structure=struc)
-                    logger.info("D mode folder is generated pdos files")
-                elif mt == 'E' :
-                    analysis_path.effectivemass(path=i, secondstep=True)
-                    em_e = open("{}/EM".format(i),'r').readlines()[-12:]
-                    E = GMDExcitonbinding.harm_mean_em(em_e)
-                    logger.info("E mode folder is generated EM files")
-                    del runfolder[-1]
-                os.chdir(calpath)
-        # CONTCOAR TO POSCAR 
-        print("%s mode finished time : "%(mt),end=" ")
-        print(time.strftime("%c\n",time.localtime(time.time())))
+            with open("bulkmodulus.gmd", 'w') as fi :
+                for e,v in zip(energy,volume) :
+                    fi.write("%.4f %.4f\n"%(v,e))
+            try :
+                eos = EOS(eos_name='birch_murnaghan')
+                eos_fit = eos.fit(volume, energy)
+                struc.scale_lattice(eos_fit.v0)
+            except :
+                indexs = energy.index(min(energy))
+                min_volume = volume[indexs]
+                struc.scale_lattice(min_volume)
+            struc.to(filename="POSCAR_optimized")
+            
+        elif k == 'dos' or k == 'band' :
+            analysis_path = GMDAnalysis()
+            os.chdir("%s/chgcar/%s"%(calpath, k))
+            if k == 'dos' :
+                os.system("%s dos width=0.03"%(analysis_path.pdos))
+                analysis_path.partialDOS(structure=struc)
+            elif k == 'band' :
+                bsp = BSPlotting(vasprun='vasprun.xml',kpoints='KPOINTS')
+                bsp.write_to_json()
+                nelect = Eigenval("EIGENVAL").nelect
+                nelect = (int(nelect/2),int(nelect/2)+1)
+                try :
+                    vbm = bsp.bs.kpoints[bsp.bsdict['vbm']['kpoint_index'][0]].as_dict()['fcoords']
+                    cbm = bsp.bs.kpoints[bsp.bsdict['cbm']['kpoint_index'][0]].as_dict()['fcoords']
+                except :
+                    vbm = [0.000, 0.000, 0.000]
+                    cbm = [0.000, 0.000, 0.000]
+                MakingInpcar(struc, "%s/chgcar/INPCAR_ele"%(calpath),nelect[1],cbm)
+                MakingInpcar(struc, "%s/chgcar/INPCAR_hole"%(calpath),nelect[0],vbm)
+            os.remove("%s/chgcar/%s/CHGCAR"%(calpath,k))
+            
+        elif k == 'effective_mass' :
+            emc = GMDAnalysis()
+            for runf in runfolder :
+                emc.effectivemass(runf, secondstep=True)
+            struc = Structure.from_file("%s/chgcar/CONTCAR"%(calpath))             
+            os.remove("%s/chgcar/%s/electron/CHGCAR"%(calpath,k))
+            os.remove("%s/chgcar/%s/hole/CHGCAR"%(calpath,k))
+            
+        elif k == 'HSE' :
+            vrun = BSVasprun("vasprun.xml")
+            bandgap = vrun.as_dict()['output']['bandgap']
+            with open("hse_bandgap.gmd",'w') as fi :
+                fi.write("HSE mode")
+                fi.write("%.5f\n"%(bandgap))
+            fi.close()
+        
+        #elif k == 'absorption' :
+        
+        # relaxed structure
+        if k == 'bulkmodulus' : 
+            struc = Structure.from_file("%s/bulkmodulus/POSCAR_optimized"%(calpath))
+        elif k == 'relaxation' :
+            struc = Structure.from_file("%s/relaxation/CONTCAR"%(calpath))
+        elif 'chgcar' in [*inputs.calmode] :
+            if k == 'dos' or k == 'band' or k == 'effective_mass' :
+                struc = Structure.from_file("%s/chgcar/CONTCAR"%(calpath))
+        else :
+            struc = load_structure(strucpath)[0][0]
+        os.chdir(calpath)           
+                

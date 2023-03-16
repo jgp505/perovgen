@@ -12,13 +12,14 @@ To see the options for the sub-commands, type “gmd  sub-command -h”.
 2. Download the perovgen code using under line :
 
 	> git clone https://github.com/jgp505/python-perovgen.git
-	
-3. Navigate to perovget root direcotry :
+3. Change the directory name :
+	> mv mdl_perovgen perovgen
+4. Navigate to perovget root direcotry :
 
 	> cd perovgen
 	
-4. Install the code, using the command :
-5. Configure your VASP pseudopotentails for use with pymatgen ::
+5. Install the code, using the command :
+6. Configure your VASP pseudopotentails for use with pymatgen ::
 	> pmg config -p <EXTRACTED_VASP_POTCAR> <MY_PSP>
 
 	> pmg config --add PMG_VASP_PSP_DIR <MY_PSP>
@@ -32,6 +33,7 @@ Here <EXTRACTED_VASP_POTCAR> is the folder where your pseudopotentials are prese
 
 # Authors 
 
+Ki-Ha Hong - project manager
 Jong-Goo Park - Owner of this project
 
 # License
@@ -41,5 +43,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 # Links
 
 >[Github](https://github.com/jgp505/python-perovgen.git)
-
+>[Gitlab](http://210.110.250.77:8081/mdl/mdl_perovgen)
 >[pip](https://pypi.org/manage/project/perovgen/releases)
